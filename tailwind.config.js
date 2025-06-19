@@ -3,10 +3,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'alu-blue': '#1E40AF',
-        'alu-purple': '#7C3AED',
-      }
+        alu: {
+          blue: "#00274D",     // Navy Blue
+          red: "#D62828",      // ALU Red
+          white: "#FFFFFF",    // Pure White
+        },
+      },
     },
   },
   plugins: [],
-}
+};
+
+
