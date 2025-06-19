@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check for existing session
-    const savedUser = localStorage.getItem('aluUser');
+    const savedUser = localStorage.getItem("aluUser");
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
@@ -17,28 +17,30 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem('aluUser', JSON.stringify(userData));
+    localStorage.setItem("aluUser", JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('aluUser');
+    localStorage.removeItem("aluUser");
   };
 
   const updateUser = (updatedData) => {
     const updatedUser = { ...user, ...updatedData };
     setUser(updatedUser);
-    localStorage.setItem('aluUser', JSON.stringify(updatedUser));
+    localStorage.setItem("aluUser", JSON.stringify(updatedUser));
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
-      updateUser, 
-      isLoading 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        updateUser,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -47,7 +49,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
