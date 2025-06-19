@@ -1,10 +1,12 @@
+import { useState } from "react";
+
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simulate checking for existing session
-    const savedUser = localStorage.getItem('aluUser');
+    const savedUser = localStorage.getItem("aluUser");
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
@@ -13,12 +15,12 @@ const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem('aluUser', JSON.stringify(userData));
+    localStorage.setItem("aluUser", JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('aluUser');
+    localStorage.removeItem("aluUser");
   };
 
   return (
@@ -31,7 +33,7 @@ const AuthProvider = ({ children }) => {
 const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
