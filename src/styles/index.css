@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Line Clamping Utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ALU Branding Styles */
+body {
+  @apply bg-white text-gray-900 font-sans;
+}
+
+.navbar {
+  @apply bg-white shadow-md flex justify-between items-center px-6 py-4;
+}
+
+.navbar a {
+  @apply text-blue-800 font-semibold hover:underline;
+}
+
+.hero {
+  @apply bg-gradient-to-r from-blue-600 to-purple-700 text-white py-24 text-center;
+}
+
+.hero h1 {
+  @apply text-4xl md:text-6xl font-bold mb-6;
+}
+
+.hero p {
+  @apply text-xl md:text-2xl mb-8 max-w-3xl mx-auto;
+}
+
+.hero .btn-primary {
+  @apply bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg;
+}
+
+.hero .btn-secondary {
+  @apply border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 rounded-lg font-semibold text-lg;
+}
+
+.section-title {
+  @apply text-3xl font-bold text-gray-900 mb-4 text-center;
+}
+
+.section-subtitle {
+  @apply text-lg text-gray-600 text-center mb-12;
+}
+
+.btn-view-all {
+  @apply bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold;
+}
