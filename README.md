@@ -1,69 +1,138 @@
-# Getting Started with Create React App
+# ALU Graduate Empowerment Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack web application built to empower ALU graduates by showcasing their projects to potential investors and sponsors. This platform allows user registration, login, project submissions, and sponsor browsing — powered by React, Node.js, Express, and MySQL.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🚀 Tech Stack
 
-### `npm start`
+### Frontend:
+- React (via Create React App)
+- Tailwind CSS (for styling)
+- Axios (for HTTP requests)
+- Context API (for authentication state)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Backend:
+- Node.js + Express
+- MySQL (via Sequelize ORM)
+- JWT Authentication
+- Cloudinary (for media uploads)
+- RESTful APIs (JSON-based communication)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## 📁 Project Structure
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+/alu-platform/
+│
+├── /client/ # Frontend React App
+│ ├── /public/
+│ ├── /src/
+│ │ ├── /components/
+│ │ ├── /pages/
+│ │ ├── /services/ # Axios services
+│ │ ├── /context/ # AuthContext
+│ │ └── App.js
+│ └── package.json
+│
+├── /server/ # Backend Node.js API
+│ ├── /controllers/
+│ ├── /routes/
+│ ├── /models/ # Sequelize models
+│ ├── /middleware/
+│ ├── /config/ # DB config, Cloudinary, etc.
+│ └── index.js # Express server entry point
+│
+├── .env # Environment variables
+└── README.md
 
-### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## ⚙️ Setup Instructions
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 1. Clone the Repository
 
-### `npm run eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+git clone https://github.com/levishimwe/Alu-platform-frontend.git
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+cd alu-platform
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+#### 2. Environment Variables
+Create a .env file in /server and include:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=alugrads
+JWT_SECRET=your_jwt_secret
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_key
+CLOUDINARY_API_SECRET=your_secret
 
-## Learn More
+#### 3. Install Dependencies
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Backend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+ .npm install
+.npm install express sequelize mysql2 dotenv bcryptjs jsonwebtoken swagger-ui-express
 
-### Code Splitting
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 🚀 Running the Application
+1.Start Backend Server
 
-### Analyzing the Bundle Size
+npm run dev
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+2.Start React Frontend
 
-### Making a Progressive Web App
+npm start
+Frontend runs on: http://localhost:3000
+Backend API runs on: http://localhost:5000/api-docs
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+🔐 Authentication Flow
+JWT is used for secure authentication.
 
-### Advanced Configuration
+Upon login/register, token is stored in localStorage.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-# Deployment
+Axios interceptors (or AuthContext) attach token to each request.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### 📦 API Endpoints (Sample)
 
-# `npm run build` fails to minify
+Method	Endpoint	Description
+POST	/auth/register	Register a user
+POST	/auth/login	Login and return JWT
+POST	/projects/upload	Upload a new project
+GET	/projects	Get all approved projects
+GET	/user/profile	Fetch logged-in user info
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### ✅ Features
+
+👨‍🎓 Graduate + Investor Signup
+
+🖼️ Image and PDF Upload (Cloudinary)
+
+🔒 JWT Auth & Protected Routes
+
+📦 RESTful API with Express
+
+📊 MySQL database with Sequelize
+
+🎨 Modern UI with Tailwind
+
+### 📌 Future Improvements
+✅ Admin Panel for Project Moderation
+
+📧 Email Verification
+
+🔍 Project Search & Filter
+
+📱 Mobile Responsiveness
+
+### 👨‍💻 Author
+Ishimwe Levis  "i.levis@alustudent.com"
+Student, Software Engineering | ALU  "https://github.com/levishimwe/Alu-platform-frontend"
+
+Mission: To become the first professor in software engineering and contribute to Africa’s digital transformation 🌍
+
+## License
+This project is open-source and available under the MIT License.
