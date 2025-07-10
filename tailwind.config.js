@@ -3,13 +3,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        alu: {
-          blue: "#00274D",     // Navy Blue
-          red: "#D62828",      // ALU Red
-          white: "#FFFFFF",    // Pure White
-        },
-      },
+    alu: {
+      red: '#D62828',
+      blue: '#00274D',
+      white: '#FFFFFF',
     },
+  },
+}
   },
   plugins: [],
 };

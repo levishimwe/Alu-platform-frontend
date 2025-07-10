@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 const AuthModal = ({ isOpen, onClose, mode, onSwitchMode }) => {
   const { login } = useAuth();
