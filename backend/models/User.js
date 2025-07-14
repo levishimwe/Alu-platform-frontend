@@ -1,23 +1,59 @@
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database'); // Add destructuring here
+const { sequelize } = require('../config/database');
 
-console.log(sequelize); // This should now show the Sequelize instance
 const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
   userType: {
     type: DataTypes.ENUM('graduate', 'investor', 'admin'),
     allowNull: false,
   },
-  firstName: DataTypes.STRING,
-  lastName: DataTypes.STRING,
-  email: {
+  firstName: {
     type: DataTypes.STRING,
-    unique: true,
     allowNull: false,
   },
-  password: DataTypes.STRING,
-  profileImage: DataTypes.TEXT,
-  country: DataTypes.STRING,
-  city: DataTypes.STRING,
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  profileImage: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  city: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  // Graduate-specific fields
+  degree: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  // Investor-specific fields
+  companyName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  companyWebsite: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   isVerified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
@@ -25,7 +61,10 @@ const User = sequelize.define('User', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
-  }
+  },
+}, {
+  tableName: 'Users',
+  timestamps: true,
 });
 
 module.exports = User;

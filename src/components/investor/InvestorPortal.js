@@ -1,35 +1,55 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
-import { mockProjects } from "../../data/mockData";
+import { useSimpleAPI } from "../../hooks/useSimpleAPI";
 import ProjectCard from "../common/ProjectCard";
 
 const InvestorPortal = () => {
-  const [projects] = useState(mockProjects);
+  const { getProjects, loading, error } = useSimpleAPI();
+  const [projects, setProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedImpactArea, setSelectedImpactArea] = useState("");
 
+  // Load projects on component mount
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const response = await getProjects();
+        setProjects(response.projects || response.data || []);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    };
+
+    loadProjects();
+  }, []);
+
   const categories = [
     "All",
-    "Agriculture",
-    "FinTech",
-    "HealthTech",
-    "EdTech",
-    "CleanTech",
+    "technology",
+    "agriculture", 
+    "fintech",
+    "healthcare",
+    "education",
+    "environment",
+    "other"
   ];
+
   const impactAreas = [
     "All",
     "Environment",
-    "Healthcare",
+    "Healthcare", 
     "Education",
     "Financial Inclusion",
     "Social Impact",
+    "Rural Development",
+    "Youth Empowerment"
   ];
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase());
+      project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       !selectedCategory ||
       selectedCategory === "All" ||
@@ -41,6 +61,33 @@ const InvestorPortal = () => {
 
     return matchesSearch && matchesCategory && matchesImpact;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">Error loading projects: {error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -76,9 +123,10 @@ const InvestorPortal = () => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat === "All" ? "" : cat}>
-                    {cat}
+                <option value="">All Categories</option>
+                {categories.slice(1).map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </option>
                 ))}
               </select>
@@ -89,8 +137,9 @@ const InvestorPortal = () => {
                 value={selectedImpactArea}
                 onChange={(e) => setSelectedImpactArea(e.target.value)}
               >
-                {impactAreas.map((area) => (
-                  <option key={area} value={area === "All" ? "" : area}>
+                <option value="">All Impact Areas</option>
+                {impactAreas.slice(1).map((area) => (
+                  <option key={area} value={area}>
                     {area}
                   </option>
                 ))}

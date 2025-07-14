@@ -3,7 +3,7 @@ const GraduateProfile = require('./GraduateProfile');
 const InvestorProfile = require('./InvestorProfile');
 const Project = require('./Project');
 const Interaction = require('./Interaction');
-const Message = require('./Message'); // ✅ Import the Message model
+const Message = require('./Message');
 
 // === Associations ===
 
@@ -31,39 +31,16 @@ InvestorProfile.belongsTo(User, {
   as: 'user',
 });
 
-// Project Associations
+// Project Associations - Updated to use graduateId
 User.hasMany(Project, {
-  foreignKey: { name: 'graduateId', allowNull: true },
+  foreignKey: { name: 'graduateId', allowNull: true }, // Changed from userId to graduateId
   as: 'projects',
   onDelete: 'SET NULL',
   onUpdate: 'CASCADE',
 });
 Project.belongsTo(User, {
-  foreignKey: { name: 'graduateId', allowNull: true },
-  as: 'graduate',
-});
-
-// Interaction Associations
-User.hasMany(Interaction, {
-  foreignKey: { name: 'investorId', allowNull: true },
-  as: 'interactions',
-  onDelete: 'SET NULL',
-  onUpdate: 'CASCADE',
-});
-Interaction.belongsTo(User, {
-  foreignKey: { name: 'investorId', allowNull: true },
-  as: 'investor',
-});
-
-Project.hasMany(Interaction, {
-  foreignKey: { name: 'projectId', allowNull: true },
-  as: 'interactions',
-  onDelete: 'CASCADE',
-  onUpdate: 'CASCADE',
-});
-Interaction.belongsTo(Project, {
-  foreignKey: { name: 'projectId', allowNull: true },
-  as: 'project',
+  foreignKey: { name: 'graduateId', allowNull: true }, // Changed from userId to graduateId
+  as: 'graduate', // Changed from 'user' to 'graduate' for clarity
 });
 
 // Message Associations
