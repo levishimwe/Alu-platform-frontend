@@ -1,40 +1,22 @@
-const jwt = require("jsonwebtoken");
-const { User } = require("../models"); // Adjust based on your models structure
+const jwt = require('jsonwebtoken');
 
-// Verify JWT token
-exports.verifyToken = async (req, res, next) => {
+const auth = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const token = req.header('Authorization');
     
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
-    
-    if (!user) {
-      return res.status(401).json({ message: "Invalid token" });
-    }
-    
-    req.user = user;
+
+    // Remove Bearer from string
+    const cleanToken = token.replace('Bearer ', '');
+
+    const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
+    res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
-// Require specific role
-exports.requireRole = (role) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
-    
-    if (req.user.role !== role) {
-      return res.status(403).json({ message: `Access denied. ${role} role required` });
-    }
-    
-    next();
-  };
-};
+module.exports = auth;
