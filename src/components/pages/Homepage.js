@@ -1,73 +1,262 @@
-import React from 'react';
-import ProjectCard from '../common/ProjectCard';
-import { mockProjects } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Homepage = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Empowering ALU Graduates
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-              Connect your innovative projects with investors, sponsors, and buyers across Africa and beyond.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg">
-                Explore Projects
-              </button>
-              <button className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 rounded-lg font-semibold text-lg">
-                Join as Graduate
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
+  const { user } = useAuth();
 
-      {/* Featured Projects */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Projects</h2>
-          <p className="text-lg text-gray-600">Discover innovative solutions from ALU graduates</p>
-        </div>
+  const slides = [
+    {
+      type: 'hero',
+      content: {
+        title: 'ALU Graduates Platform',
+        subtitle: 'Showcase Innovation',
+        description: 'For years, the African Leadership University (ALU) has been shaping the future - empowering bold, ethical, and entrepreneurial leaders transforming Africa and the world through innovative projects.',
+        buttonText: 'EXPLORE PROJECTS',
+        buttonAction: () => {
+          if (!user) {
+            document.querySelector('[data-auth-trigger]')?.click();
+          }
+        }
+      }
+    },
+    {
+      type: 'video',
+      content: {
+        title: 'Experience ALU',
+        subtitle: 'A One of A Kind University',
+        // Use ALU's official YouTube videos - replace with actual ALU video URL
+        youtubeId: '8rkzLjpRFOU&t=276s', // Replace this with actual ALU video ID
+        // Alternative ALU videos you can use:
+        // youtubeId: 'YOUR_ALU_VIDEO_ID_HERE',
+        description: 'Discover how ALU graduates are making impact across Africa and beyond through innovative projects and entrepreneurial solutions.'
+      }
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  // Auto-advance slides
+  useEffect(() => {
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 10000); // Change slide every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative">
+      {/* Hero Slider */}
+      <div className="relative h-screen overflow-hidden">
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
+              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            {slide.type === 'hero' && (
+              <div className="relative h-full bg-gradient-to-br from-purple-900 via-purple-700 to-pink-600">
+                {/* Animated flowing background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/90 via-purple-700/80 to-pink-600/90">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-800/30 to-pink-500/30 animate-pulse"></div>
+                  <div className="absolute top-0 left-0 w-full h-full">
+                    <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-bounce"></div>
+                    <div className="absolute top-32 right-20 w-24 h-24 bg-pink-300/20 rounded-full blur-lg animate-pulse delay-1000"></div>
+                    <div className="absolute bottom-20 left-32 w-40 h-40 bg-purple-300/15 rounded-full blur-2xl animate-bounce delay-500"></div>
+                    <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-blue-300/10 rounded-full blur-lg animate-pulse delay-2000"></div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex items-center justify-center h-full px-4 sm:px-6 lg:px-8">
+                  <div className="text-center text-white max-w-4xl mx-auto">
+                    {/* Large Number */}
+                    <div className="flex items-center justify-center mb-8">
+                      <div className="text-8xl md:text-9xl font-bold opacity-20 mr-4">10</div>
+                      <div className="text-center">
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 rounded-full flex items-center justify-center mb-2 animate-spin-slow">
+                          <span className="text-white font-bold text-xs">CELEBRATING</span>
+                        </div>
+                        <div className="text-xs md:text-sm font-semibold">
+                          Years of Innovation<br />
+                          Future of Opportunities
+                        </div>
+                      </div>
+                    </div>
+
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-fade-in-up">
+                      {slide.content.title}
+                    </h1>
+                    <h2 className="text-2xl md:text-4xl font-light mb-6 text-blue-100 animate-fade-in-up delay-200">
+                      {slide.content.subtitle}
+                    </h2>
+                    <p className="text-lg md:text-xl mb-8 text-gray-200 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-400">
+                      {slide.content.description}
+                    </p>
+                    <button
+                      onClick={slide.content.buttonAction}
+                      data-auth-trigger
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg animate-fade-in-up delay-600"
+                    >
+                      {slide.content.buttonText}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {slide.type === 'video' && (
+              <div className="relative h-full bg-black">
+                {/* YouTube Video Embed */}
+                <div className="absolute inset-0">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${slide.content.youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${slide.content.youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
+                    title="ALU University Video"
+                    className="w-full h-full object-cover"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      width: '100vw',
+                      height: '56.25vw', // 16:9 aspect ratio
+                      minHeight: '100vh',
+                      minWidth: '177.77vh', // 16:9 aspect ratio
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  ></iframe>
+                </div>
+                
+                {/* Video Overlay */}
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                  <div className="text-center text-white max-w-4xl mx-auto px-4">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-fade-in-up">
+                      {slide.content.title}
+                    </h1>
+                    <h2 className="text-2xl md:text-4xl font-light mb-6 text-blue-100 animate-fade-in-up delay-200">
+                      {slide.content.subtitle}
+                    </h2>
+                    <p className="text-lg md:text-xl mb-8 text-gray-200 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-400">
+                      {slide.content.description}
+                    </p>
+                    
+                    {/* Mute/Unmute Button */}
+                    <button
+                      onClick={() => setIsMuted(!isMuted)}
+                      className="bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-6 rounded-full text-sm transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center mx-auto animate-fade-in-up delay-600"
+                    >
+                      {isMuted ? (
+                        <>
+                          <VolumeX className="mr-2" size={20} />
+                          UNMUTE
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="mr-2" size={20} />
+                          MUTE
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Navigation Arrows */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 z-20 backdrop-blur-sm"
+        >
+          <ChevronLeft size={24} />
+        </button>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockProjects.slice(0, 3).map((project) => (
-            <ProjectCard key={project.id} project={project} />
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 z-20 backdrop-blur-sm"
+        >
+          <ChevronRight size={24} />
+        </button>
+
+        {/* Slide Indicators */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'bg-white scale-110' : 'bg-white/50'
+              }`}
+            />
           ))}
         </div>
-        
-        <div className="text-center mt-12">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold">
-            View All Projects
-          </button>
+
+        {/* Progress Bar for Auto-advance */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-white/10 z-20">
+          <div 
+            className="h-full bg-white transition-all ease-linear"
+            style={{
+              width: currentSlide === 0 ? '0%' : '100%',
+              animationDuration: '10s'
+            }}
+          ></div>
         </div>
       </div>
-      
-       {/* Stats Section */}
-      <div className="bg-[#D72638] text-white pt-16 pb-4">
 
-
+      {/* Additional Content Sections */}
+      <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">150+</div>
-              <div className="text-blue-100">Active Projects</div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Empowering ALU Graduates
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Our platform connects innovative ALU graduates with investors and showcases 
+              groundbreaking projects that are transforming Africa and the world.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg transform hover:scale-105 transition-all duration-300">
+              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🚀</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Innovation Hub</h3>
+              <p className="text-gray-600">
+                Discover cutting-edge projects from ALU graduates across various industries and sectors.
+              </p>
             </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">500+</div>
-              <div className="text-blue-100">ALU Graduates</div>
+
+            <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg transform hover:scale-105 transition-all duration-300">
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🤝</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Connect & Invest</h3>
+              <p className="text-gray-600">
+                Bridge the gap between innovative graduates and potential investors and partners.
+              </p>
             </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">75+</div>
-              <div className="text-blue-100">Investors</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">$2M+</div>
-              <div className="text-blue-100">Funding Raised</div>
+
+            <div className="text-center p-6 bg-gradient-to-br from-pink-50 to-orange-50 rounded-lg transform hover:scale-105 transition-all duration-300">
+              <div className="w-16 h-16 bg-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🌍</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Global Impact</h3>
+              <p className="text-gray-600">
+                Supporting projects that create meaningful change across Africa and beyond.
+              </p>
             </div>
           </div>
         </div>

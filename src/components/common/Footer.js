@@ -1,9 +1,23 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Footer() {
+  const { user } = useAuth();
+
+  const handleAuthRequiredClick = (e, targetPath) => {
+    e.preventDefault();
+    if (!user) {
+      // If not logged in, redirect to login
+      window.location.href = '/login';
+    } else {
+      // If logged in, navigate to the target path
+      window.location.href = targetPath;
+    }
+  };
+
   return (
     <footer className="bg-[#011e41] text-white pt-16 pb-12 -mt-4">
-
+      
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
         <div>
           <h2 className="text-2xl font-bold mb-4">ALU Platform</h2>
@@ -15,27 +29,149 @@ export default function Footer() {
         <div>
           <h3 className="text-lg font-semibold mb-2">For Graduates</h3>
           <ul className="text-sm space-y-1">
-            <li><a href="#" className="hover:underline">Upload Projects</a></li>
-            <li><a href="#" className="hover:underline">Dashboard</a></li>
-            <li><a href="#" className="hover:underline">Resources</a></li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to access graduate features.');
+                  } else if (user.userType === 'graduate') {
+                    // Navigate to graduate dashboard
+                    window.location.reload(); // This will trigger the navigation in your app
+                  } else {
+                    alert('This feature is only available for graduates.');
+                  }
+                }}
+              >
+                Upload Projects
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to access your dashboard.');
+                  } else {
+                    window.location.reload(); // This will trigger the navigation in your app
+                  }
+                }}
+              >
+                Dashboard
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to access resources.');
+                  } else {
+                    alert('Resources page coming soon!');
+                  }
+                }}
+              >
+                Resources
+              </a>
+            </li>
           </ul>
         </div>
 
         <div>
           <h3 className="text-lg font-semibold mb-2">For Investors</h3>
           <ul className="text-sm space-y-1">
-            <li><a href="#" className="hover:underline">Browse Projects</a></li>
-            <li><a href="#" className="hover:underline">Connect</a></li>
-            <li><a href="#" className="hover:underline">Success Stories</a></li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to browse projects.');
+                  } else {
+                    window.location.reload(); // This will trigger navigation to investor portal
+                  }
+                }}
+              >
+                Browse Projects
+              </a>
+            </li>
+            <li>
+              <a 
+                href="https://www.linkedin.com/school/alueducation/posts/?feedView=all" 
+                className="hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Connect
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to view success stories.');
+                  } else {
+                    alert('Success Stories page coming soon!');
+                  }
+                }}
+              >
+                Success Stories
+              </a>
+            </li>
           </ul>
         </div>
 
         <div>
           <h3 className="text-lg font-semibold mb-2">Support</h3>
           <ul className="text-sm space-y-1">
-            <li><a href="#" className="hover:underline">Help Center</a></li>
-            <li><a href="#" className="hover:underline">Contact Us</a></li>
-            <li><a href="#" className="hover:underline">Privacy Policy</a></li>
+            <li>
+              <a 
+                href="https://www.alueducation.com/" 
+                className="hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Help Center
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert(`Contact Information:\n\nName: Levis Ishimwe\nPhone: +250 784 106 595\nEmail: i.levis@alustudent.com`);
+                }}
+              >
+                Contact Us
+              </a>
+            </li>
+            <li>
+              <a 
+                href="#" 
+                className="hover:underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!user) {
+                    alert('Please log in to view privacy policy.');
+                  } else {
+                    alert('Privacy Policy page coming soon!');
+                  }
+                }}
+              >
+                Privacy Policy
+              </a>
+            </li>
           </ul>
         </div>
       </div>
