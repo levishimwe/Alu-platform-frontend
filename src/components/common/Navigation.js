@@ -1,135 +1,235 @@
 import React, { useState } from 'react';
-import { User, LogIn, LogOut, Menu, X } from 'lucide-react';
+
 import { useAuth } from '../../context/AuthContext';
-
+import { Search, Menu, X } from 'lucide-react';
 const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
-  const { user, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    setIsMenuOpen(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const handleAuthRequiredClick = (targetPage) => {
+    if (!user) {
+      setAuthModal({ isOpen: true, mode: 'login' });
+    } else {
+      setCurrentPage(targetPage);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCurrentPage('home');
   };
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <h1 
-                className="text-2xl font-bold text-blue-600 cursor-pointer"
-                onClick={() => handlePageChange('home')}
+    <header className="bg-[#1e3a8a] text-white shadow-lg">
+      {/* Main Navigation Bar */}
+      <div className="bg-[#1e3a8a] border-b border-blue-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <button 
+                onClick={() => setCurrentPage('home')}
+                className="flex items-center space-x-2"
               >
-                ALU Platform
-              </h1>
+                <div className="bg-white text-[#1e3a8a] px-3 py-1 rounded font-bold text-xl">
+                  ALU
+                </div>
+                <span className="text-sm">
+                  ALU<br />
+                  GP
+                </span>
+              </button>
             </div>
-            <div className="hidden md:ml-10 md:flex md:space-x-8">
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-8">
               <button 
-                onClick={() => handlePageChange('home')}
-                className={`px-3 py-2 text-sm font-medium ${
-                  currentPage === 'home' ? 'text-blue-600' : 'text-gray-900 hover:text-blue-600'
+                onClick={() => setCurrentPage('home')}
+                className={`hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                  currentPage === 'home' ? 'text-blue-200' : ''
                 }`}
               >
-                Home
+                HOME PROJECTS
               </button>
+
               <button 
-                onClick={() => handlePageChange('investor-portal')}
-                className={`px-3 py-2 text-sm font-medium ${
-                  currentPage === 'investor-portal' ? 'text-blue-600' : 'text-gray-900 hover:text-blue-600'
+                onClick={() => handleAuthRequiredClick('investor-portal')}
+                className={`hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                  currentPage === 'investor-portal' ? 'text-blue-200' : ''
                 }`}
               >
-                Projects
+                ALU PROJECTS
               </button>
-              {user && (
-                <button 
-                  onClick={() => handlePageChange(user.userType === 'graduate' ? 'graduate-dashboard' : 'investor-portal')}
-                  className={`px-3 py-2 text-sm font-medium ${
-                    currentPage.includes('dashboard') ? 'text-blue-600' : 'text-gray-900 hover:text-blue-600'
-                  }`}
+
+              <button 
+                onClick={() => handleAuthRequiredClick('graduates')}
+                className="hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide"
+              >
+                GRADUATES
+              </button>
+
+              <button 
+                onClick={() => handleAuthRequiredClick('investor-portal')}
+                className={`hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                  currentPage === 'investor-portal' ? 'text-blue-200' : ''
+                }`}
+              >
+                INVESTORS
+              </button>
+
+              {/* Search Icon */}
+              <button className="hover:text-blue-200 p-2">
+                <Search size={20} />
+              </button>
+            </nav>
+
+            {/* Login/Register or User Menu */}
+            <div className="hidden md:flex items-center space-x-4">
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm">Hello, {user.firstName}</span>
+                  <button
+                    onClick={() => {
+                      if (user.userType === 'graduate') {
+                        setCurrentPage('graduate-dashboard');
+                      } else if (user.userType === 'investor') {
+                        setCurrentPage('investor-portal');
+                      } else if (user.userType === 'admin') {
+                        setCurrentPage('admin-panel');
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
+                  >
+                    DASHBOARD
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="border border-white hover:bg-white hover:text-blue-600 px-4 py-2 rounded text-sm font-medium"
+                  >
+                    LOGOUT
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded text-sm font-bold uppercase tracking-wide"
                 >
-                  Dashboard
+                  LOGIN/REGISTER
                 </button>
               )}
-              <a href="#help" className="text-gray-900 hover:text-blue-600 px-3 py-2 text-sm font-medium">Help</a>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <img 
-                    src={user.profileImage || '/api/placeholder/32/32'} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <span className="text-sm font-medium text-gray-700">{user.firstName}</span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-red-600"
-                >
-                  <LogOut size={16} />
-                  <span className="text-sm">Logout</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex space-x-2">
-                <button 
-                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Sign In
-                </button>
-                <button 
-                  onClick={() => setAuthModal({ isOpen: true, mode: 'signup' })}
-                  className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
-            
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="text-white hover:text-blue-200 p-2"
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
-        
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50">
-              <button 
-                onClick={() => handlePageChange('home')}
-                className="block px-3 py-2 text-base font-medium text-gray-900 hover:text-blue-600 w-full text-left"
-              >
-                Home
-              </button>
-              <button 
-                onClick={() => handlePageChange('investor-portal')}
-                className="block px-3 py-2 text-base font-medium text-gray-900 hover:text-blue-600 w-full text-left"
-              >
-                Projects
-              </button>
-              {user && (
-                <button 
-                  onClick={() => handlePageChange(user.userType === 'graduate' ? 'graduate-dashboard' : 'investor-portal')}
-                  className="block px-3 py-2 text-base font-medium text-gray-900 hover:text-blue-600 w-full text-left"
+      </div>
+
+      {/* Mobile Navigation Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-[#1e3a8a] border-t border-blue-700">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            <button
+              onClick={() => {
+                setCurrentPage('home');
+                setIsMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                currentPage === 'home' ? 'bg-blue-700' : ''
+              }`}
+            >
+              HOME PROJECTS
+            </button>
+            
+            <button
+              onClick={() => {
+                handleAuthRequiredClick('investor-portal');
+                setIsMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                currentPage === 'investor-portal' ? 'bg-blue-700' : ''
+              }`}
+            >
+              ALU PROJECTS
+            </button>
+            
+            <button
+              onClick={() => {
+                handleAuthRequiredClick('graduates');
+                setIsMenuOpen(false);
+              }}
+              className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded"
+            >
+              GRADUATES
+            </button>
+            
+            <button
+              onClick={() => {
+                handleAuthRequiredClick('investor-portal');
+                setIsMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                currentPage === 'investor-portal' ? 'bg-blue-700' : ''
+              }`}
+            >
+              INVESTORS
+            </button>
+            
+            <div className="border-t border-blue-700 pt-4 mt-4">
+              {user ? (
+                <div className="space-y-2">
+                  <div className="px-3 py-2 text-sm text-blue-200">
+                    Hello, {user.firstName}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (user.userType === 'graduate') {
+                        setCurrentPage('graduate-dashboard');
+                      } else if (user.userType === 'investor') {
+                        setCurrentPage('investor-portal');
+                      } else if (user.userType === 'admin') {
+                        setCurrentPage('admin-panel');
+                      }
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 rounded"
+                  >
+                    DASHBOARD
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm font-medium border border-white hover:bg-white hover:text-blue-600 rounded"
+                  >
+                    LOGOUT
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setAuthModal({ isOpen: true, mode: 'login' });
+                    setIsMenuOpen(false);
+                  }}
+                  className="block w-full text-center px-3 py-2 text-sm font-bold bg-red-600 hover:bg-red-700 rounded uppercase tracking-wide"
                 >
-                  Dashboard
+                  LOGIN/REGISTER
                 </button>
               )}
-              <a href="#help" className="block px-3 py-2 text-base font-medium text-gray-900 hover:text-blue-600">Help</a>
             </div>
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      )}
+    </header>
   );
 };
 
