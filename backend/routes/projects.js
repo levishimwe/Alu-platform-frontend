@@ -1,161 +1,207 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { Project, User } = require('../models');
-const { sequelize } = require('../config/database'); // Import sequelize from config instead
-const upload = require('../middleware/upload');
+const { sequelize } = require('../config/database');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
-// Create a new project with increased file size handling
-router.post('/', auth, (req, res, next) => {
-  console.log('Starting project upload...');
+// Validation functions
+const validateGoogleDriveLink = (url) => {
+  return url && url.includes('drive.google.com');
+};
+
+const validateYouTubeLink = (url) => {
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/;
+  return youtubeRegex.test(url);
+};
+
+// Create a new project with URL validation
+router.post('/', auth, [
+  body('title')
+    .trim()
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Title must be between 3 and 100 characters'),
   
-  // Create upload middleware with specific configuration for projects
-  const projectUpload = upload.fields([
-    { name: 'images', maxCount: 10 },
-    { name: 'videos', maxCount: 5 },
-    { name: 'documents', maxCount: 10 }
-  ]);
-
-  projectUpload(req, res, async (err) => {
-    if (err) {
-      console.error('Upload error:', err);
+  body('description')
+    .trim()
+    .isLength({ min: 10, max: 2000 })
+    .withMessage('Description must be between 10 and 2000 characters'),
+  
+  body('category')
+    .notEmpty()
+    .withMessage('Category is required'),
+  
+  body('impactArea')
+    .optional()
+    .trim(),
+  
+  // Validate image URLs (Google Drive only)
+  body('imageUrls')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
       
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ 
-          error: 'File too large',
-          message: `File "${err.field}" is too large. Maximum size allowed is 500MB.`,
-          field: err.field
-        });
+      let urls;
+      try {
+        urls = Array.isArray(value) ? value : JSON.parse(value);
+      } catch (e) {
+        throw new Error('Invalid image URLs format');
       }
       
-      return res.status(400).json({ 
-        error: 'Upload error',
-        message: err.message 
+      if (!Array.isArray(urls)) {
+        throw new Error('Image URLs must be an array');
+      }
+      
+      for (const url of urls) {
+        if (url && !validateGoogleDriveLink(url)) {
+          throw new Error(`Image URL must be a Google Drive link: ${url}`);
+        }
+      }
+      return true;
+    }),
+  
+  // Validate video URLs (YouTube only)
+  body('videoUrls')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      
+      let urls;
+      try {
+        urls = Array.isArray(value) ? value : JSON.parse(value);
+      } catch (e) {
+        throw new Error('Invalid video URLs format');
+      }
+      
+      if (!Array.isArray(urls)) {
+        throw new Error('Video URLs must be an array');
+      }
+      
+      for (const url of urls) {
+        if (url && !validateYouTubeLink(url)) {
+          throw new Error(`Video URL must be a YouTube link: ${url}`);
+        }
+      }
+      return true;
+    }),
+  
+  // Validate document URLs (Google Drive only)
+  body('documentUrls')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      
+      let urls;
+      try {
+        urls = Array.isArray(value) ? value : JSON.parse(value);
+      } catch (e) {
+        throw new Error('Invalid document URLs format');
+      }
+      
+      if (!Array.isArray(urls)) {
+        throw new Error('Document URLs must be an array');
+      }
+      
+      for (const url of urls) {
+        if (url && !validateGoogleDriveLink(url)) {
+          throw new Error(`Document URL must be a Google Drive link: ${url}`);
+        }
+      }
+      return true;
+    }),
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('❌ Project validation errors:', errors.array());
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
       });
     }
 
-    try {
-      const { title, description, category, impactArea, imageUrls, videoUrls, documentUrls } = req.body;
-      const userId = req.user.userId;
+    const { title, description, category, impactArea, imageUrls, videoUrls, documentUrls } = req.body;
+    const userId = req.user.userId;
 
-      console.log('Creating project:', { title, description, category, impactArea });
-      console.log('Files received:', req.files);
-      console.log('URLs received:', { imageUrls, videoUrls, documentUrls });
+    console.log('Creating project:', { title, description, category, impactArea });
+    console.log('URLs received:', { imageUrls, videoUrls, documentUrls });
 
-      // Validation
-      if (!title || !description) {
-        return res.status(400).json({ 
-          message: 'Title and description are required' 
-        });
+    // Process and validate URLs
+    let images = [];
+    let videos = [];
+    let documents = [];
+
+    // Process image URLs (Google Drive only)
+    if (imageUrls) {
+      try {
+        const parsedImageUrls = Array.isArray(imageUrls) ? imageUrls : JSON.parse(imageUrls);
+        images = parsedImageUrls.filter(url => url && url.trim() !== '' && validateGoogleDriveLink(url));
+      } catch (e) {
+        console.error('Error parsing image URLs:', e);
       }
-
-      // Process uploaded files - FIXED to check for valid filenames
-      let images = [];
-      let videos = [];
-      let documents = [];
-
-      if (req.files) {
-        // Process image files - check for valid filename
-        if (req.files.images) {
-          images = req.files.images
-            .filter(file => file.filename && file.filename !== 'undefined')
-            .map(file => `/uploads/projects/images/${file.filename}`);
-        }
-        
-        // Process video files - check for valid filename
-        if (req.files.videos) {
-          videos = req.files.videos
-            .filter(file => file.filename && file.filename !== 'undefined')
-            .map(file => `/uploads/projects/videos/${file.filename}`);
-        }
-        
-        // Process document files - check for valid filename
-        if (req.files.documents) {
-          documents = req.files.documents
-            .filter(file => file.filename && file.filename !== 'undefined')
-            .map(file => `/uploads/projects/documents/${file.filename}`);
-        }
-      }
-
-      // Add URLs if provided - Fixed to handle empty/undefined values
-      if (imageUrls && imageUrls !== 'undefined' && imageUrls.trim() !== '') {
-        try {
-          const parsedImageUrls = JSON.parse(imageUrls);
-          if (Array.isArray(parsedImageUrls)) {
-            const validUrls = parsedImageUrls.filter(url => url && url.trim() !== '' && url !== 'undefined');
-            images = [...images, ...validUrls];
-          }
-        } catch (e) {
-          console.error('Error parsing image URLs:', e);
-        }
-      }
-
-      if (videoUrls && videoUrls !== 'undefined' && videoUrls.trim() !== '') {
-        try {
-          const parsedVideoUrls = JSON.parse(videoUrls);
-          if (Array.isArray(parsedVideoUrls)) {
-            const validUrls = parsedVideoUrls.filter(url => url && url.trim() !== '' && url !== 'undefined');
-            videos = [...videos, ...validUrls];
-          }
-        } catch (e) {
-          console.error('Error parsing video URLs:', e);
-        }
-      }
-
-      if (documentUrls && documentUrls !== 'undefined' && documentUrls.trim() !== '') {
-        try {
-          const parsedDocumentUrls = JSON.parse(documentUrls);
-          if (Array.isArray(parsedDocumentUrls)) {
-            const validUrls = parsedDocumentUrls.filter(url => url && url.trim() !== '' && url !== 'undefined');
-            documents = [...documents, ...validUrls];
-          }
-        } catch (e) {
-          console.error('Error parsing document URLs:', e);
-        }
-      }
-
-      console.log('Processed media arrays:', { images, videos, documents });
-
-      // Convert arrays to JSON strings for storage (matching your table structure)
-      // Only save if arrays have valid content
-      const projectData = {
-        title,
-        description,
-        category,
-        impactArea,
-        images: images.length > 0 ? JSON.stringify(images) : null,
-        videos: videos.length > 0 ? JSON.stringify(videos) : null,
-        documents: documents.length > 0 ? JSON.stringify(documents) : null,
-        graduateId: userId
-      };
-
-      console.log('Project data to save:', projectData);
-
-      // Create project
-      const project = await Project.create(projectData);
-
-      // Return the project without association for now
-      res.status(201).json({
-        message: 'Project created successfully',
-        project: {
-          ...project.toJSON(),
-          images: projectData.images ? JSON.parse(projectData.images) : [],
-          videos: projectData.videos ? JSON.parse(projectData.videos) : [],
-          documents: projectData.documents ? JSON.parse(projectData.documents) : []
-        }
-      });
-
-    } catch (error) {
-      console.error('Project creation error:', error);
-      res.status(500).json({ 
-        message: 'Server error', 
-        error: error.message 
-      });
     }
-  });
+
+    // Process video URLs (YouTube only)
+    if (videoUrls) {
+      try {
+        const parsedVideoUrls = Array.isArray(videoUrls) ? videoUrls : JSON.parse(videoUrls);
+        videos = parsedVideoUrls.filter(url => url && url.trim() !== '' && validateYouTubeLink(url));
+      } catch (e) {
+        console.error('Error parsing video URLs:', e);
+      }
+    }
+
+    // Process document URLs (Google Drive only)
+    if (documentUrls) {
+      try {
+        const parsedDocumentUrls = Array.isArray(documentUrls) ? documentUrls : JSON.parse(documentUrls);
+        documents = parsedDocumentUrls.filter(url => url && url.trim() !== '' && validateGoogleDriveLink(url));
+      } catch (e) {
+        console.error('Error parsing document URLs:', e);
+      }
+    }
+
+    console.log('Processed and validated URLs:', { images, videos, documents });
+
+// Create project data matching the updated model
+const projectData = {
+  title,
+  description,
+  category,
+  impactArea,
+  images: images, // Will be converted to JSON string by model
+  videos: videos, // Will be converted to JSON string by model  
+  documents: documents, // Will be converted to JSON string by model
+  graduateId: userId,
+  status: 'published' // Valid values: 'draft', 'published', 'under_review'
+};
+
+console.log('Project data to save:', projectData);
+
+// Create project
+const project = await Project.create(projectData);
+
+    res.status(201).json({
+      message: 'Project created successfully',
+      project: {
+        ...project.toJSON(),
+        images: images,
+        videos: videos,
+        documents: documents
+      }
+    });
+
+  } catch (error) {
+    console.error('💥 Project creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create project',
+      message: error.message 
+    });
+  }
 });
 
-// Get all projects - Use raw query to avoid column issues (ONLY ONE GET ROUTE)
+// Get all projects (existing code - no changes needed)
 router.get('/', async (req, res) => {
   try {
     console.log('Fetching projects with query params:', req.query);
@@ -199,52 +245,52 @@ router.get('/', async (req, res) => {
       type: sequelize.QueryTypes.SELECT
     });
 
-    console.log(`Raw projects from DB: ${projects.length}`);
+    console.log(`Found ${projects.length} projects`);
 
-    // Parse JSON fields for response with better error handling and filter invalid URLs
+    // Parse JSON fields for response
     const projectsWithParsedMedia = projects.map(project => {
       try {
         const parsedProject = { ...project };
         
-        // Parse images and filter out invalid ones
+        // Parse and validate images (Google Drive)
         if (project.images && typeof project.images === 'string') {
           try {
             const parsedImages = JSON.parse(project.images);
             parsedProject.images = Array.isArray(parsedImages) 
-              ? parsedImages.filter(img => img && !img.includes('undefined') && img.trim() !== '')
+              ? parsedImages.filter(img => img && validateGoogleDriveLink(img))
               : [];
           } catch (e) {
-            console.error('Error parsing images for project', project.id, ':', project.images);
+
             parsedProject.images = [];
           }
         } else {
           parsedProject.images = [];
         }
         
-        // Parse videos and filter out invalid ones
+        // Parse and validate videos (YouTube)
         if (project.videos && typeof project.videos === 'string') {
           try {
             const parsedVideos = JSON.parse(project.videos);
             parsedProject.videos = Array.isArray(parsedVideos) 
-              ? parsedVideos.filter(video => video && !video.includes('undefined') && video.trim() !== '')
+              ? parsedVideos.filter(video => video && validateYouTubeLink(video))
               : [];
           } catch (e) {
-            console.error('Error parsing videos for project', project.id, ':', project.videos);
+
             parsedProject.videos = [];
           }
         } else {
           parsedProject.videos = [];
         }
         
-        // Parse documents and filter out invalid ones
+        // Parse and validate documents (Google Drive)
         if (project.documents && typeof project.documents === 'string') {
           try {
             const parsedDocuments = JSON.parse(project.documents);
             parsedProject.documents = Array.isArray(parsedDocuments) 
-              ? parsedDocuments.filter(doc => doc && !doc.includes('undefined') && doc.trim() !== '')
+              ? parsedDocuments.filter(doc => doc && validateGoogleDriveLink(doc))
               : [];
           } catch (e) {
-            console.error('Error parsing documents for project', project.id, ':', project.documents);
+
             parsedProject.documents = [];
           }
         } else {
@@ -261,10 +307,9 @@ router.get('/', async (req, res) => {
           documents: []
         };
       }
+
     });
 
-    console.log(`Found ${projectsWithParsedMedia.length} projects after processing`);
-    
     res.json({
       projects: projectsWithParsedMedia,
       total: projectsWithParsedMedia.length
@@ -272,8 +317,8 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message 
+      error: 'Failed to fetch projects',
+      message: error.message 
     });
   }
 });

@@ -1,6 +1,6 @@
-// === src/context/AuthContext.js ===
+// src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI, userAPI, tokenManager, handleAPIError } from '../services/api';
+import { authAPI, userAPI, handleAPIError } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
 
   // Check authentication status on mount
   const checkAuth = useCallback(async () => {
-    const token = tokenManager.getToken();
+    const token = localStorage.getItem('token');
     
     if (!token) {
       setIsLoading(false);
@@ -37,11 +37,11 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await userAPI.getProfile();
-      setUser(response.data);
+      setUser(response.data.user);
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Auth check failed:', error);
-      tokenManager.clearTokens();
+      localStorage.removeItem('token');
       setIsAuthenticated(false);
       setUser(null);
     } finally {
@@ -54,14 +54,16 @@ export const AuthProvider = ({ children }) => {
   }, [checkAuth]);
 
   // Login function
-  const login = async (credentials) => {
+  const login = async (email, password) => {
     try {
       setError(null);
-      const response = await authAPI.login(credentials);
-      const { token, refreshToken, user } = response.data;
+      setIsLoading(true);
       
-      // Store tokens
-      tokenManager.setTokens(token, refreshToken);
+      const response = await authAPI.login({ email, password });
+      const { token, user } = response.data;
+      
+      // Store token
+      localStorage.setItem('token', token);
       
       // Update state
       setUser(user);
@@ -72,68 +74,47 @@ export const AuthProvider = ({ children }) => {
       const errorInfo = handleAPIError(error);
       setError(errorInfo.message);
       return { success: false, error: errorInfo.message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Register function
-  const register = async (userData) => {
-    try {
-      setError(null);
-      const response = await authAPI.register(userData);
-      
-      // If registration includes auto-login (backend returns token)
-      if (response.data.token) {
-        const { token, refreshToken, user } = response.data;
-        tokenManager.setTokens(token, refreshToken);
-        setUser(user);
-        setIsAuthenticated(true);
-      }
-      
-      return { success: true, data: response.data };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Google OAuth login
-  const googleLogin = async (googleToken) => {
-    try {
-      setError(null);
-      const response = await authAPI.googleAuth(googleToken);
-      const { token, refreshToken, user } = response.data;
-      
-      tokenManager.setTokens(token, refreshToken);
+const register = async (userData) => {
+  try {
+    setError(null);
+    setIsLoading(true);
+    
+    // Remove confirmPassword before sending to backend
+    const { confirmPassword, ...backendData } = userData;
+    
+    console.log('🚀 Sending registration data:', backendData);
+    
+    const response = await authAPI.register(backendData);
+    
+    // Registration includes auto-login (backend returns token)
+    if (response.data.token) {
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      
-      return { success: true, user };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
     }
-  };
-
-  // LinkedIn OAuth login
-  const linkedinLogin = async (linkedinToken) => {
-    try {
-      setError(null);
-      const response = await authAPI.linkedinAuth(linkedinToken);
-      const { token, refreshToken, user } = response.data;
-      
-      tokenManager.setTokens(token, refreshToken);
-      setUser(user);
-      setIsAuthenticated(true);
-      
-      return { success: true, user };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
+    
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error('❌ Registration error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    const errorInfo = handleAPIError(error);
+    setError(errorInfo.message);
+    return { success: false, error: errorInfo.message };
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Logout function
   const logout = async () => {
@@ -142,7 +123,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
-      tokenManager.clearTokens();
+      localStorage.removeItem('token');
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -153,81 +134,8 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       const response = await userAPI.updateProfile(profileData);
-      setUser(response.data);
-      return { success: true, user: response.data };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Upload profile avatar
-  const uploadAvatar = async (file) => {
-    try {
-      setError(null);
-      const formData = new FormData();
-      formData.append('avatar', file);
-      
-      const response = await userAPI.uploadAvatar(formData);
-      setUser(prev => ({ ...prev, profileImage: response.data.imageUrl }));
-      return { success: true, imageUrl: response.data.imageUrl };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Upload ALU degree (for graduates)
-  const uploadDegree = async (file) => {
-    try {
-      setError(null);
-      const formData = new FormData();
-      formData.append('degree', file);
-      
-      const response = await userAPI.uploadDegree(formData);
-      setUser(prev => ({ ...prev, aluDegreeDocument: response.data.documentUrl }));
-      return { success: true, documentUrl: response.data.documentUrl };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Forgot password
-  const forgotPassword = async (email) => {
-    try {
-      setError(null);
-      await authAPI.forgotPassword(email);
-      return { success: true };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Reset password
-  const resetPassword = async (token, newPassword) => {
-    try {
-      setError(null);
-      await authAPI.resetPassword(token, newPassword);
-      return { success: true };
-    } catch (error) {
-      const errorInfo = handleAPIError(error);
-      setError(errorInfo.message);
-      return { success: false, error: errorInfo.message };
-    }
-  };
-
-  // Verify email
-  const verifyEmail = async (token) => {
-    try {
-      setError(null);
-      await authAPI.verifyEmail(token);
-      return { success: true };
+      setUser(response.data.user);
+      return { success: true, user: response.data.user };
     } catch (error) {
       const errorInfo = handleAPIError(error);
       setError(errorInfo.message);
@@ -245,15 +153,10 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     register,
-    googleLogin,
-    linkedinLogin,
+
     logout,
     updateProfile,
-    uploadAvatar,
-    uploadDegree,
-    forgotPassword,
-    resetPassword,
-    verifyEmail,
+    
     clearError,
     checkAuth,
   };
@@ -262,4 +165,5 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
-  );};
+  );
+};

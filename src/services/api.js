@@ -1,4 +1,4 @@
-// === src/services/api.js ===
+// src/services/api.js
 import axios from 'axios';
 
 // Base API configuration
@@ -13,39 +13,15 @@ const api = axios.create({
   },
 });
 
-// Enhanced rate limiting state
-let requestQueue = [];
-let isProcessingQueue = false;
-const REQUEST_DELAY = 500; // Increased to 500ms
-const MAX_REQUESTS_PER_MINUTE = 30; // Limit requests per minute
-const MAX_RETRY_ATTEMPTS = 3;
-
-// Request deduplication map
-const activeRequests = new Map();
-
-// Request interceptor with improved rate limiting
+// Request interceptor
 api.interceptors.request.use(
-  async (config) => {
-    // Add auth token
-    const token = localStorage.getItem('authToken');
+  (config) => {
+    // Add auth token - Fix the key name
+    const token = localStorage.getItem('token'); // ✅ Changed from 'authToken' to 'token'
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
     }
-
-    // Create request key for deduplication
-    const requestKey = `${config.method}-${config.url}-${JSON.stringify(config.data)}`;
-    
-    // Check if same request is already in progress
-    if (activeRequests.has(requestKey)) {
-      throw new axios.Cancel('Duplicate request cancelled');
-    }
-    
-    // Add to active requests
-    activeRequests.set(requestKey, Date.now());
-    config.requestKey = requestKey;
-
-    // Enhanced rate limiting
-    await enforceRateLimit();
 
     return config;
   },
@@ -54,85 +30,16 @@ api.interceptors.request.use(
   }
 );
 
-// Enhanced rate limiting function
-const enforceRateLimit = async () => {
-  const now = Date.now();
-  const oneMinuteAgo = now - 60000;
-  
-  // Clean old requests from queue
-  requestQueue = requestQueue.filter(time => time > oneMinuteAgo);
-  
-  // If we're at the limit, wait
-  if (requestQueue.length >= MAX_REQUESTS_PER_MINUTE) {
-    const oldestRequest = Math.min(...requestQueue);
-    const waitTime = (oldestRequest + 60000) - now;
-    console.log(`Rate limit reached. Waiting ${waitTime}ms...`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-  }
-  
-  // Add current request to queue
-  requestQueue.push(now);
-  
-  // Add delay between requests
-  if (requestQueue.length > 1) {
-    await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY));
-  }
-};
-
-// Response interceptor with proper retry logic
+// Response interceptor
 api.interceptors.response.use(
-  (response) => {
-    // Remove from active requests on success
-    if (response.config.requestKey) {
-      activeRequests.delete(response.config.requestKey);
-    }
-    return response;
-  },
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Remove from active requests on error
-    if (originalRequest?.requestKey) {
-      activeRequests.delete(originalRequest.requestKey);
-    }
-    
-    // Skip retry for cancelled requests
-    if (axios.isCancel(error)) {
-      return Promise.reject(error);
-    }
-    
-    // Handle 429 (Rate Limit) errors with exponential backoff
-    if (error.response?.status === 429 && !originalRequest._retryCount) {
-      originalRequest._retryCount = 0;
-    }
-    
-    if (error.response?.status === 429 && originalRequest._retryCount < MAX_RETRY_ATTEMPTS) {
-      originalRequest._retryCount++;
-      
-      // Calculate exponential backoff delay
-      const retryAfter = error.response.headers['retry-after'];
-      const baseDelay = retryAfter ? parseInt(retryAfter) * 1000 : 1000;
-      const exponentialDelay = baseDelay * Math.pow(2, originalRequest._retryCount - 1);
-      const jitter = Math.random() * 1000; // Add randomness to prevent thundering herd
-      const delay = exponentialDelay + jitter;
-      
-      console.log(`Rate limited. Retrying after ${delay}ms... (attempt ${originalRequest._retryCount}/${MAX_RETRY_ATTEMPTS})`);
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      // Remove the retry flag to allow fresh request
-      delete originalRequest._retryCount;
-      
-      return api(originalRequest);
-    }
-    
+  (response) => response,
+  (error) => {
     // Handle 401 (Unauthorized) errors
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('token'); // ✅ Changed from 'authToken' to 'token'
       window.location.href = '/';
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -141,32 +48,20 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   login: (credentials) => api.post('/auth/login', credentials),
-  googleAuth: (token) => api.post('/auth/oauth/google', { token }),
-  linkedinAuth: (token) => api.post('/auth/oauth/linkedin', { token }),
+
   logout: () => api.post('/auth/logout'),
-  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  resetPassword: (token, newPassword) => 
-    api.post('/auth/reset-password', { token, newPassword }),
-  verifyEmail: (token) => api.get(`/auth/verify-email/${token}`),
+
 };
 
 // === User Management API ===
 export const userAPI = {
-  getProfile: () => api.get('/users/profile'),
-  updateProfile: (profileData) => api.put('/users/profile', profileData),
-  uploadAvatar: (formData) => 
-    api.post('/users/upload-avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
-  uploadDegree: (formData) => 
-    api.post('/users/upload-degree', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
-  deleteAccount: () => api.delete('/users/account'),
+  getProfile: () => api.get('/auth/profile'), // ✅ Changed from '/users/profile' to '/auth/profile'
+  updateProfile: (profileData) => api.put('/auth/profile', profileData), // ✅ Changed from '/users/profile' to '/auth/profile'
 };
 
 // === Projects API ===
 export const projectAPI = {
+  // Get all projects with optional filters
   getProjects: (filters = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -174,109 +69,126 @@ export const projectAPI = {
     });
     return api.get(`/projects?${params.toString()}`);
   },
-  getFeaturedProjects: () => api.get('/projects/featured'),
+
+  // Get single project
   getProject: (projectId) => api.get(`/projects/${projectId}`),
-  createProject: (projectData) => api.post('/projects', projectData),
-  updateProject: (projectId, projectData) => 
-    api.put(`/projects/${projectId}`, projectData),
+
+  // Create new project
+  createProject: (projectData) => {
+    try {
+      // Validate URLs before sending
+      const validatedData = validateProjectUrls(projectData);
+      
+      // Ensure URLs are properly formatted
+      const formattedData = {
+        ...validatedData,
+        imageUrls: JSON.stringify(validatedData.imageUrls || []),
+        videoUrls: JSON.stringify(validatedData.videoUrls || []),
+        documentUrls: JSON.stringify(validatedData.documentUrls || [])
+      };
+      
+      return api.post('/projects', formattedData);
+    } catch (error) {
+      return Promise.reject(new Error(`Invalid project data: ${error.message}`));
+    }
+  },
+
+  // Update existing project
+  updateProject: (projectId, projectData) => {
+    try {
+      // Validate URLs before sending
+      const validatedData = validateProjectUrls(projectData);
+      
+      // Ensure URLs are properly formatted
+      const formattedData = {
+        ...validatedData,
+        imageUrls: JSON.stringify(validatedData.imageUrls || []),
+        videoUrls: JSON.stringify(validatedData.videoUrls || []),
+        documentUrls: JSON.stringify(validatedData.documentUrls || [])
+      };
+      
+      return api.put(`/projects/${projectId}`, formattedData);
+    } catch (error) {
+      return Promise.reject(new Error(`Invalid project data: ${error.message}`));
+    }
+  },
+
+  // Delete project
   deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
-  incrementViews: (projectId) => api.post(`/projects/${projectId}/view`),
-  uploadProjectMedia: (projectId, formData) => 
-    api.post(`/projects/${projectId}/upload-media`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
 };
 
-// === Graduate Dashboard API ===
-export const graduateAPI = {
-  getDashboard: () => api.get('/graduate/dashboard'),
-  getMyProjects: () => api.get('/graduate/projects'),
-  getProjectAnalytics: (projectId) => 
-    api.get(`/graduate/analytics/${projectId}`),
-  getMessages: () => api.get('/graduate/messages'),
-};
+// Helper function to validate project URLs
+const validateProjectUrls = (projectData) => {
+  const validatedData = { ...projectData };
 
-// === Investor Portal API ===
-export const investorAPI = {
-  getDashboard: () => api.get('/investor/dashboard'),
-  bookmarkProject: (projectId) => 
-    api.post(`/investor/bookmark/${projectId}`),
-  getBookmarks: () => api.get('/investor/bookmarks'),
-  expressInterest: (interestData) => 
-    api.post('/investor/express-interest', interestData),
-  contactGraduate: (contactData) => 
-    api.post('/investor/contact-graduate', contactData),
-  getConversations: () => api.get('/investor/conversations'),
-};
-
-// === Admin Panel API ===
-export const adminAPI = {
-  getDashboard: () => api.get('/admin/dashboard'),
-  getUsers: (filters = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
+  // Validate Google Drive links for images
+  if (validatedData.imageUrls && Array.isArray(validatedData.imageUrls)) {
+    validatedData.imageUrls = validatedData.imageUrls.filter(url => {
+      if (!url || url.trim() === '') return false;
+      if (!url.includes('drive.google.com')) {
+        console.warn(`Invalid image URL (must be Google Drive): ${url}`);
+        return false;
+      }
+      return true;
     });
-    return api.get(`/admin/users?${params.toString()}`);
-  },
-  updateUserStatus: (userId, status) => 
-    api.put(`/admin/users/${userId}/status`, { status }),
-  getPendingProjects: () => api.get('/admin/projects/pending'),
-  approveProject: (projectId, approved, reason = '') => 
-    api.put(`/admin/projects/${projectId}/approve`, { approved, reason }),
-  getAnalytics: () => api.get('/admin/analytics'),
-  generateReport: (reportType, filters = {}) => 
-    api.get('/admin/reports', { params: { type: reportType, ...filters } }),
-};
+  }
 
-// === File Upload Helpers ===
-export const fileUploadAPI = {
-  createFormData: (file, fieldName = 'file') => {
-    const formData = new FormData();
-    formData.append(fieldName, file);
-    return formData;
-  },
-  createMultipleFormData: (files, fieldName = 'files') => {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append(fieldName, file);
+  // Validate YouTube links for videos
+  if (validatedData.videoUrls && Array.isArray(validatedData.videoUrls)) {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/;
+    validatedData.videoUrls = validatedData.videoUrls.filter(url => {
+      if (!url || url.trim() === '') return false;
+      if (!youtubeRegex.test(url)) {
+        console.warn(`Invalid video URL (must be YouTube): ${url}`);
+        return false;
+      }
+      return true;
     });
-    return formData;
-  },
+  }
+
+  // Validate Google Drive links for documents
+  if (validatedData.documentUrls && Array.isArray(validatedData.documentUrls)) {
+    validatedData.documentUrls = validatedData.documentUrls.filter(url => {
+      if (!url || url.trim() === '') return false;
+      if (!url.includes('drive.google.com')) {
+        console.warn(`Invalid document URL (must be Google Drive): ${url}`);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  return validatedData;
 };
 
 // === Enhanced Error Handling ===
-export const handleAPIError = (error) => {
-  if (axios.isCancel(error)) {
-    return {
-      message: 'Request was cancelled',
-      status: 0,
-      cancelled: true,
-    };
-  }
-  
+export const handleAPIError = (error) =>
+   {
+
   if (error.response) {
     const errorData = {
-      message: error.response.data?.message || 'An error occurred',
+      message: error.response.data?.error || error.response.data?.message || 'An error occurred',
       status: error.response.status,
       data: error.response.data,
     };
     
     switch (error.response.status) {
-      case 429:
-        errorData.message = 'Too many requests. Please wait a moment and try again.';
+      case 400:
+        errorData.message = error.response.data?.details 
+          ? `Validation failed: ${error.response.data.details.map(d => d.message).join(', ')}`
+          : error.response.data?.error || 'Bad request';
         break;
       case 401:
-        errorData.message = 'Session expired. Please login again.';
+        errorData.message = 'Please login to continue';
         break;
       case 403:
-        errorData.message = 'You do not have permission to perform this action.';
+        errorData.message = 'You do not have permission to perform this action';
         break;
       case 404:
-        errorData.message = 'Resource not found.';
+        errorData.message = 'Resource not found';
         break;
       case 500:
-        errorData.message = 'Server error. Please try again later.';
+        errorData.message = 'Server error. Please try again later';
         break;
       default:
         break;
@@ -285,7 +197,7 @@ export const handleAPIError = (error) => {
     return errorData;
   } else if (error.request) {
     return {
-      message: 'Network error. Please check your connection.',
+      message: 'Network error. Please check your connection',
       status: 0,
     };
   } else {
@@ -294,38 +206,7 @@ export const handleAPIError = (error) => {
       status: -1,
     };
   }
-};
 
-// === Token Management ===
-export const tokenManager = {
-  setTokens: (authToken, refreshToken) => {
-    localStorage.setItem('authToken', authToken);
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
-    }
-  },
-  getToken: () => localStorage.getItem('authToken'),
-  getRefreshToken: () => localStorage.getItem('refreshToken'),
-  clearTokens: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-  },
-};
-
-// === Request Queue Management ===
-export const requestQueueManager = {
-  clearQueue: () => {
-    requestQueue = [];
-    activeRequests.clear();
-  },
-  getQueueStatus: () => ({
-    queueLength: requestQueue.length,
-    isProcessing: isProcessingQueue,
-    activeRequests: activeRequests.size,
-  }),
-  setProcessingState: (state) => {
-    isProcessingQueue = state;
-  },
 };
 
 export default api;

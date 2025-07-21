@@ -1,474 +1,505 @@
 import React, { useState } from 'react';
+import { X, Eye, EyeOff, User, Mail, Lock, Camera, FileText, Building, Globe, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const AuthModal = ({ isOpen, onClose, mode, onSwitchMode }) => {
-  const { login } = useAuth();
-  
-  // Login form state
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-
-  // Graduate registration form state
-  const [graduateData, setGraduateData] = useState({
+  const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    country: '',
-    city: '',
-    userType: 'graduate'
-  });
-
-  // Investor registration form state
-  const [investorData, setInvestorData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    country: '',
-    city: '',
+    confirmPassword: '',
+    userType: 'graduate',
+    profileImage: '',
+    bio: '',
+    // Graduate fields
+    university: '',
+    graduationYear: '',
+    degreeCertificate: '',
+    // Investor fields
     companyName: '',
     companyWebsite: '',
-    userType: 'investor'
+    // Location fields
+    country: '',
+    city: ''
   });
-
-  const [userType, setUserType] = useState('graduate');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [profileImage, setProfileImage] = useState(null);
-  const [degreeFile, setDegreeFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLoginChange = (e) => {
+  const { login, register } = useAuth();
+
+  const countries = [
+    'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Argentina', 'Australia', 'Austria',
+    'Bangladesh', 'Belgium', 'Botswana', 'Brazil', 'Burkina Faso', 'Burundi',
+    'Cameroon', 'Canada', 'Chad', 'China', 'Congo', 'Democratic Republic of Congo',
+    'Egypt', 'Ethiopia', 'France', 'Germany', 'Ghana', 'India', 'Kenya', 'Libya',
+    'Madagascar', 'Mali', 'Morocco', 'Mozambique', 'Niger', 'Nigeria', 'Rwanda',
+    'South Africa', 'Tanzania', 'Tunisia', 'Uganda', 'United Kingdom', 'United States',
+    'Zambia', 'Zimbabwe', 'Other'
+  ];
+
+  const validateGoogleEmail = (email) => {
+    const googleDomains = ['@gmail.com', '@googlemail.com'];
+    return googleDomains.some(domain => email.toLowerCase().endsWith(domain));
+  };
+
+  const validateGoogleDriveLink = (url) => {
+    if (!url) return true; // Optional field
+    return url.includes('drive.google.com');
+  };
+
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setLoginData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear specific error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Real-time validation
+    if (name === 'email' && value && !validateGoogleEmail(value)) {
+      setErrors(prev => ({ ...prev, email: 'This email is not accepted. Please use a Google email address (@gmail.com or @googlemail.com)' }));
+    }
+
+    if ((name === 'profileImage' || name === 'degreeCertificate') && value && !validateGoogleDriveLink(value)) {
+      setErrors(prev => ({ ...prev, [name]: `${name === 'profileImage' ? 'Profile image' : 'Degree certificate'} must be a Google Drive link` }));
     }
   };
 
-  const handleGraduateChange = (e) => {
-    const { name, value } = e.target;
-    setGraduateData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
-  };
+  const validateForm = () => {
+    const newErrors = {};
 
-  const handleInvestorChange = (e) => {
-    const { name, value } = e.target;
-    setInvestorData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
-  };
-
-  const handleFileChange = (e, fileType) => {
-    const file = e.target.files[0];
-    if (fileType === 'profileImage') {
-      setProfileImage(file);
-    } else if (fileType === 'degree') {
-      setDegreeFile(file);
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setLoading(true);
-    
-    if (!loginData.email || !loginData.password) {
-      setErrors({ general: 'Please fill in all fields' });
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await login(loginData);
-      onClose();
-    } catch (error) {
-      setErrors({ general: error.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Custom register function that handles file uploads
-  const registerWithFiles = async (formData) => {
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+    if (mode === 'register') {
+      if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+      if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+      if (!validateGoogleEmail(formData.email)) {
+        newErrors.email = 'This email is not accepted. Please use a Google email address (@gmail.com or @googlemail.com)';
       }
-
-      return { success: true, ...data };
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setLoading(true);
-    
-    const textData = userType === 'graduate' ? graduateData : investorData;
-    
-    // Validation
-    const requiredFields = ['firstName', 'lastName', 'email', 'password', 'country', 'city'];
-    if (userType === 'investor') {
-      requiredFields.push('companyName');
-    }
-    
-    for (let field of requiredFields) {
-      if (!textData[field] || textData[field].trim() === '') {
-        setErrors({ [field]: `${field} is required` });
-        setLoading(false);
-        return;
+      if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+      if (formData.profileImage && !validateGoogleDriveLink(formData.profileImage)) {
+        newErrors.profileImage = 'Profile image must be a Google Drive link';
+      }
+      if (formData.degreeCertificate && !validateGoogleDriveLink(formData.degreeCertificate)) {
+        newErrors.degreeCertificate = 'Degree certificate must be a Google Drive link';
       }
     }
 
-    if (textData.password.length < 6) {
-      setErrors({ password: 'Password must be at least 6 characters' });
-      setLoading(false);
-      return;
-    }
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
 
-    try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      
-      // Add text fields
-      Object.keys(textData).forEach(key => {
-        if (textData[key] !== null && textData[key] !== undefined && textData[key] !== '') {
-          formData.append(key, textData[key]);
-        }
-      });
-
-      // Add files if they exist
-      if (profileImage) {
-        formData.append('profileImage', profileImage);
-      }
-      if (degreeFile && userType === 'graduate') {
-        formData.append('degree', degreeFile);
-      }
-
-      const response = await registerWithFiles(formData);
-      if (response.success) {
-        alert('Registration successful! Please login with your credentials.');
-        onSwitchMode('login');
-        // Reset forms
-        setGraduateData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          password: '',
-          country: '',
-          city: '',
-          userType: 'graduate'
-        });
-        setInvestorData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          password: '',
-          country: '',
-          city: '',
-          companyName: '',
-          companyWebsite: '',
-          userType: 'investor'
-        });
-        setProfileImage(null);
-        setDegreeFile(null);
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setErrors({ general: error.message });
-    } finally {
-      setLoading(false);
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
+
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) return;
+
+  console.log('📝 Form data being submitted:', formData);
+
+  setIsLoading(true);
+  try {
+    if (mode === 'login') {
+      await login(formData.email, formData.password); // ✅ Pass email and password separately
+    } else {
+      await register(formData); // ✅ Pass entire form data object
+    }
+    onClose();
+  } catch (error) {
+    console.error('❌ Submit error:', error);
+    setErrors({ submit: error.message || 'An error occurred' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">
-            {mode === 'login' ? 'Login' : 'Register'}
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            ✕
-          </button>
-        </div>
-
-        {errors.general && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {errors.general}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {mode === 'login' ? 'Welcome Back' : 'Join ALU Platform'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
           </div>
-        )}
 
-        {mode === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-4">
+          {/* Error Message */}
+          {errors.submit && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{errors.submit}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <>
+                {/* Name Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name *
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          errors.firstName ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="John"
+                      />
+                    </div>
+                    {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name *
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          errors.lastName ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Doe"
+                      />
+                    </div>
+                    {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                  </div>
+                </div>
+
+                {/* User Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    I am a *
+                  </label>
+                  <select
+                    name="userType"
+                    value={formData.userType}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="graduate">ALU Graduate</option>
+                    <option value="investor">Investor</option>
+                  </select>
+                </div>
+
+                {/* Location Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <select
+                        name="country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select Country</option>
+                        {countries.map(country => (
+                          <option key={country} value={country}>{country}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter city"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Graduate-specific fields */}
+                {formData.userType === 'graduate' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          University
+                        </label>
+                        <input
+                          type="text"
+                          name="university"
+                          value={formData.university}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="African Leadership University"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Graduation Year
+                        </label>
+                        <input
+                          type="number"
+                          name="graduationYear"
+                          value={formData.graduationYear}
+                          onChange={handleInputChange}
+                          min="1950"
+                          max={new Date().getFullYear() + 10}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="2024"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Degree Certificate (Google Drive Link)
+                      </label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="url"
+                          name="degreeCertificate"
+                          value={formData.degreeCertificate}
+                          onChange={handleInputChange}
+                          className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            errors.degreeCertificate ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="https://drive.google.com/file/d/your-certificate-id/view"
+                        />
+                      </div>
+                      {errors.degreeCertificate && <p className="text-red-500 text-xs mt-1">{errors.degreeCertificate}</p>}
+                    </div>
+                  </>
+                )}
+
+                {/* Investor-specific fields */}
+                {formData.userType === 'investor' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company Name
+                      </label>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="text"
+                          name="companyName"
+                          value={formData.companyName}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Your Company Name"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company Website URL
+                      </label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="url"
+                          name="companyWebsite"
+                          value={formData.companyWebsite}
+                          onChange={handleInputChange}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="https://yourcompany.com"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Profile Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Profile Image (Google Drive Link)
+                  </label>
+                  <div className="relative">
+                    <Camera className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="url"
+                      name="profileImage"
+                      value={formData.profileImage}
+                      onChange={handleInputChange}
+                      className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.profileImage ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="https://drive.google.com/file/d/your-image-id/view"
+                    />
+                  </div>
+                  {errors.profileImage && <p className="text-red-500 text-xs mt-1">{errors.profileImage}</p>}
+                </div>
+
+                {/* Bio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bio
+                  </label>
+                  <textarea
+                    name="bio"
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Tell us a bit about yourself..."
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
+                Google Email Address *
               </label>
-              <input
-                type="email"
-                name="email"
-                value={loginData.email}
-                onChange={handleLoginChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="your.email@gmail.com"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Only Google email addresses (@gmail.com, @googlemail.com) are accepted
+              </p>
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
+
+            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Password *
               </label>
-              <input
-                type="password"
-                name="password"
-                value={loginData.password}
-                onChange={handleLoginChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-12 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
+
+            {/* Confirm Password */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-12 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Confirm your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+              </div>
+            )}
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Please wait...' : (mode === 'login' ? 'Sign In' : 'Create Account')}
             </button>
           </form>
-        ) : (
-          <div>
-            {/* User Type Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Register as:
-              </label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="graduate"
-                    checked={userType === 'graduate'}
-                    onChange={(e) => setUserType(e.target.value)}
-                    className="mr-2"
-                  />
-                  Graduate
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="investor"
-                    checked={userType === 'investor'}
-                    onChange={(e) => setUserType(e.target.value)}
-                    className="mr-2"
-                  />
-                  Investor
-                </label>
-              </div>
-            </div>
 
-            <form onSubmit={handleRegister} className="space-y-4">
-              {/* Profile Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Profile Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, 'profileImage')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF up to 5MB</p>
-                {profileImage && (
-                  <p className="text-xs text-green-600 mt-1">Selected: {profileImage.name}</p>
-                )}
-              </div>
-
-              {/* Common fields for both graduate and investor */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={userType === 'graduate' ? graduateData.firstName : investorData.firstName}
-                    onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={userType === 'graduate' ? graduateData.lastName : investorData.lastName}
-                    onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={userType === 'graduate' ? graduateData.email : investorData.email}
-                  onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={userType === 'graduate' ? graduateData.password : investorData.password}
-                  onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  minLength="6"
-                />
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Country *
-                  </label>
-                  <input
-                    type="text"
-                    name="country"
-                    value={userType === 'graduate' ? graduateData.country : investorData.country}
-                    onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={userType === 'graduate' ? graduateData.city : investorData.city}
-                    onChange={userType === 'graduate' ? handleGraduateChange : handleInvestorChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
-                </div>
-              </div>
-
-              {/* Investor-specific fields */}
-              {userType === 'investor' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="companyName"
-                      value={investorData.companyName}
-                      onChange={handleInvestorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                    {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Website
-                    </label>
-                    <input
-                      type="url"
-                      name="companyWebsite"
-                      value={investorData.companyWebsite}
-                      onChange={handleInvestorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://yourcompany.com"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Graduate-specific fields */}
-              {userType === 'graduate' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Degree Certificate
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => handleFileChange(e, 'degree')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX up to 5MB</p>
-                  {degreeFile && (
-                    <p className="text-xs text-green-600 mt-1">Selected: {degreeFile.name}</p>
-                  )}
-                </div>
-              )}
-
+          {/* Switch Mode */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                onClick={() => onSwitchMode(mode === 'login' ? 'register' : 'login')}
+                className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                {loading ? 'Registering...' : 'Register'}
+                {mode === 'login' ? 'Sign up' : 'Sign in'}
               </button>
-            </form>
+            </p>
           </div>
-        )}
 
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => onSwitchMode(mode === 'login' ? 'register' : 'login')}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            {mode === 'login' ? 'Need an account? Register' : 'Have an account? Login'}
-          </button>
+          {/* Google Drive Instructions */}
+          {mode === 'register' && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">How to get Google Drive links:</h4>
+              <ol className="text-xs text-blue-700 space-y-1">
+                <li>1. Upload your files to Google Drive</li>
+                <li>2. Right-click the file and select "Get link"</li>
+                <li>3. Set permission to "Anyone with the link can view"</li>
+                <li>4. Copy and paste the link in the fields above</li>
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>

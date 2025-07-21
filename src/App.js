@@ -7,11 +7,13 @@ import InvestorPortal from "./components/investor/InvestorPortal";
 import AdminPanel from "./components/admin/AdminPanel";
 import AuthModal from "./components/auth/AuthModal";
 import Footer from "./components/common/Footer";
+import ProjectForm from "./components/projects/ProjectForm";
 import "./styles/index.css";
 
 const AppContent = () => {
   const [currentPage, setCurrentPage] = useState("home");
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: "login" });
+  const [editingProject, setEditingProject] = useState(null); // For editing projects
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
@@ -48,7 +50,7 @@ const AppContent = () => {
 
   // Authentication check for protected pages
   const handlePageNavigation = (targetPage) => {
-    const protectedPages = ['graduate-dashboard', 'investor-portal', 'admin-panel', 'graduates'];
+    const protectedPages = ['graduate-dashboard', 'investor-portal', 'admin-panel', 'graduates', 'create-project', 'edit-project'];
     
     if (protectedPages.includes(targetPage) && !user) {
       setAuthModal({ isOpen: true, mode: 'login' });
@@ -56,6 +58,50 @@ const AppContent = () => {
     }
     
     setCurrentPage(targetPage);
+  };
+
+  // Handle project creation/editing
+  const handleProjectSubmit = async (projectData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const url = editingProject 
+        ? `http://localhost:5000/api/projects/${editingProject.id}`
+        : 'http://localhost:5000/api/projects';
+      
+      const method = editingProject ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(projectData),
+      });
+
+      if (response.ok) {
+        setEditingProject(null);
+        setCurrentPage('graduate-dashboard'); // Redirect back to dashboard
+        // You might want to show a success message here
+      } else {
+        const error = await response.json();
+        console.error('Project submission failed:', error);
+        // Handle error (show error message)
+      }
+    } catch (error) {
+      console.error('Project submission error:', error);
+      // Handle error
+    }
+  };
+
+  const handleProjectCancel = () => {
+    setEditingProject(null);
+    setCurrentPage('graduate-dashboard');
+  };
+
+  const handleEditProject = (project) => {
+    setEditingProject(project);
+    setCurrentPage('edit-project');
   };
 
   if (isLoading) {
@@ -88,7 +134,66 @@ const AppContent = () => {
             </div>
           );
         }
-        return <GraduateDashboard />;
+        return (
+          <GraduateDashboard 
+            onCreateProject={() => setCurrentPage('create-project')}
+            onEditProject={handleEditProject}
+          />
+        );
+        
+      case "create-project":
+        if (!user || user.userType !== "graduate") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need to be logged in as a graduate to create projects.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="min-h-screen bg-gray-50 py-8">
+            <ProjectForm
+              onSubmit={handleProjectSubmit}
+              onCancel={handleProjectCancel}
+              initialData={null}
+            />
+          </div>
+        );
+
+      case "edit-project":
+        if (!user || user.userType !== "graduate") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need to be logged in as a graduate to edit projects.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="min-h-screen bg-gray-50 py-8">
+            <ProjectForm
+              onSubmit={handleProjectSubmit}
+              onCancel={handleProjectCancel}
+              initialData={editingProject}
+            />
+          </div>
+        );
         
       case "investor-portal":
         if (!user) {
