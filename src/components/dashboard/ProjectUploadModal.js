@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Upload, Link, Plus, Trash2 } from 'lucide-react';
+import { X, Link, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { projectAPI } from '../../services/api';
 
 const ProjectUploadModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -9,51 +10,23 @@ const ProjectUploadModal = ({ isOpen, onClose, onSuccess }) => {
     impactArea: ''
   });
 
-  // File and URL states
-  const [images, setImages] = useState([]);
+  // Only URL states (no file states)
   const [imageUrls, setImageUrls] = useState(['']);
-  const [videos, setVideos] = useState([]);
+
   const [videoUrls, setVideoUrls] = useState(['']);
-  const [documents, setDocuments] = useState([]);
+
   const [documentUrls, setDocumentUrls] = useState(['']);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [activeTab, setActiveTab] = useState({
-    images: 'upload', // 'upload' or 'url'
-    videos: 'upload',
-    documents: 'upload'
-  });
-
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
-  };
 
-  // File handling functions
-  const handleFileChange = (e, type) => {
-    const files = Array.from(e.target.files);
-    
-    if (type === 'images') {
-      setImages(prev => [...prev, ...files]);
-    } else if (type === 'videos') {
-      setVideos(prev => [...prev, ...files]);
-    } else if (type === 'documents') {
-      setDocuments(prev => [...prev, ...files]);
-    }
-  };
-
-  const removeFile = (index, type) => {
-    if (type === 'images') {
-      setImages(prev => prev.filter((_, i) => i !== index));
-    } else if (type === 'videos') {
-      setVideos(prev => prev.filter((_, i) => i !== index));
-    } else if (type === 'documents') {
-      setDocuments(prev => prev.filter((_, i) => i !== index));
-    }
   };
 
   // URL handling functions
@@ -93,116 +66,167 @@ const ProjectUploadModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
- // In your handleSubmit function, replace the alert with proper onSuccess call:
+  // Validation functions
+  const validateGoogleDriveUrl = (url) => {
+    return url.includes('drive.google.com');
+  };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setErrors({});
+  const validateYouTubeUrl = (url) => {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/;
+    return youtubeRegex.test(url);
+  };
 
-  // Validation
-  if (!formData.title || !formData.description) {
-    setErrors({ general: 'Title and description are required' });
-    setLoading(false);
-    return;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
 
-  try {
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-    const token = localStorage.getItem('token');
+    // Basic validation
+    if (!formData.title || !formData.description) {
+      setErrors({ general: 'Title and description are required' });
+      setLoading(false);
+      return;
+    }
 
-    // Create FormData for file upload
-    const submitData = new FormData();
-    
-    // Add text fields
-    Object.keys(formData).forEach(key => {
-      if (formData[key]) {
-        submitData.append(key, formData[key]);
-      }
-    });
+    // URL validation
+    const validationErrors = {};
 
-    // Add files
-    images.forEach((file, index) => {
-      submitData.append('images', file);
-    });
-    videos.forEach((file, index) => {
-      submitData.append('videos', file);
-    });
-    documents.forEach((file, index) => {
-      submitData.append('documents', file);
-    });
-
-    // Add URLs (filter out empty ones)
+    // Validate image URLs (Google Drive only)
     const validImageUrls = imageUrls.filter(url => url.trim());
+    for (const url of validImageUrls) {
+      if (!validateGoogleDriveUrl(url)) {
+        validationErrors.images = 'All image URLs must be Google Drive links';
+        break;
+      }
+    }
+
+    // Validate video URLs (YouTube only)
     const validVideoUrls = videoUrls.filter(url => url.trim());
+    for (const url of validVideoUrls) {
+      if (!validateYouTubeUrl(url)) {
+        validationErrors.videos = 'All video URLs must be YouTube links';
+        break;
+      }
+    }
+
+    // Validate document URLs (Google Drive only)
     const validDocumentUrls = documentUrls.filter(url => url.trim());
-
-    if (validImageUrls.length > 0) {
-      submitData.append('imageUrls', JSON.stringify(validImageUrls));
-    }
-    if (validVideoUrls.length > 0) {
-      submitData.append('videoUrls', JSON.stringify(validVideoUrls));
-    }
-    if (validDocumentUrls.length > 0) {
-      submitData.append('documentUrls', JSON.stringify(validDocumentUrls));
+    for (const url of validDocumentUrls) {
+      if (!validateGoogleDriveUrl(url)) {
+        validationErrors.documents = 'All document URLs must be Google Drive links';
+        break;
+      }
     }
 
-    const response = await fetch(`${API_BASE_URL}/projects`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: submitData
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to create project');
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setLoading(false);
+      return;
     }
 
-    // Reset form
-    setFormData({
-      title: '',
-      description: '',
-      category: '',
-      impactArea: ''
-    });
-    setImages([]);
-    setVideos([]);
-    setDocuments([]);
-    setImageUrls(['']);
-    setVideoUrls(['']);
-    setDocumentUrls(['']);
+    try {
+      // Prepare project data
+      const projectData = {
+        ...formData,
+        imageUrls: validImageUrls,
+        videoUrls: validVideoUrls,
+        documentUrls: validDocumentUrls
+      };
 
-    // Call onSuccess callback if it exists
-    if (onSuccess && typeof onSuccess === 'function') {
-      onSuccess(data.project);
-    } else {
-      // Fallback alert if onSuccess is not provided
-      alert('Project uploaded successfully!');
+      console.log('🚀 Submitting project data:', projectData);
+
+      // Use the API service
+      const response = await projectAPI.createProject(projectData);
+
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        category: '',
+        impactArea: ''
+      });
+      setImageUrls(['']);
+      setVideoUrls(['']);
+      setDocumentUrls(['']);
+
+      // Call success callback
+      if (onSuccess && typeof onSuccess === 'function') {
+        onSuccess(response.data.project);
+      }
+
       onClose();
-    }
-  } catch (error) {
-    setErrors({ general: error.message });
-  } finally {
-    setLoading(false);
-  }
-};
 
-  const TabButton = ({ type, mode, label, icon }) => (
-    <button
-      type="button"
-      onClick={() => setActiveTab(prev => ({ ...prev, [type]: mode }))}
-      className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium ${
-        activeTab[type] === mode
-          ? 'bg-blue-100 text-blue-700'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
+    } catch (error) {
+      console.error('❌ Project creation error:', error);
+      setErrors({ general: error.message || 'Failed to create project' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const UrlSection = ({ title, type, urls, placeholder, validation, icon }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-3">
+        {title}
+      </label>
+      
+      {/* Validation info */}
+      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className="flex items-start space-x-2">
+          <AlertCircle size={16} className="text-blue-600 mt-0.5" />
+          <div className="text-sm text-blue-700">
+            <p className="font-medium">{validation.title}</p>
+            <p className="text-blue-600">{validation.description}</p>
+            <p className="text-xs mt-1 text-blue-500">Example: {validation.example}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {urls.map((url, index) => (
+          <div key={index} className="flex items-center space-x-2">
+            <div className="flex-1 relative">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => handleUrlChange(index, e.target.value, type)}
+                placeholder={placeholder}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors[type] ? 'border-red-300' : 'border-gray-300'
+                }`}
+              />
+              {icon && (
+                <div className="absolute right-3 top-2.5 text-gray-400">
+                  {icon}
+                </div>
+              )}
+            </div>
+            {urls.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeUrlField(index, type)}
+                className="text-red-500 hover:text-red-700 p-1"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+        
+        {errors[type] && (
+          <p className="text-sm text-red-600">{errors[type]}</p>
+        )}
+        
+        <button
+          type="button"
+          onClick={() => addUrlField(type)}
+          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+        >
+          <Plus size={16} />
+          <span>Add Another {title.slice(0, -1)} URL</span>
+        </button>
+      </div>
+    </div>
   );
 
   if (!isOpen) return null;
@@ -290,252 +314,45 @@ const handleSubmit = async (e) => {
             />
           </div>
 
-          {/* Images Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Images
-            </label>
-            <div className="flex space-x-2 mb-3">
-              <TabButton
-                type="images"
-                mode="upload"
-                label="Upload Files"
-                icon={<Upload size={16} />}
-              />
-              <TabButton
-                type="images"
-                mode="url"
-                label="Add URLs"
-                icon={<Link size={16} />}
-              />
-            </div>
+          {/* URL Sections */}
+          <UrlSection
+            title="Images"
+            type="images"
+            urls={imageUrls}
+            placeholder="https://drive.google.com/file/d/your-file-id/view"
+            validation={{
+              title: "Google Drive Images Required",
+              description: "Upload your images to Google Drive and share the link here.",
+              example: "https://drive.google.com/file/d/1ABC123.../view"
+            }}
+            icon={<Link size={16} />}
+          />
 
-            {activeTab.images === 'upload' ? (
-              <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleFileChange(e, 'images')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB each</p>
-                
-                {/* Display selected files */}
-                {images.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {images.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <span className="text-sm text-gray-700">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index, 'images')}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => handleUrlChange(index, e.target.value, 'images')}
-                      placeholder="https://example.com/image.jpg"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {imageUrls.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeUrlField(index, 'images')}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addUrlField('images')}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
-                >
-                  <Plus size={16} />
-                  <span>Add Another URL</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <UrlSection
+            title="Videos"
+            type="videos"
+            urls={videoUrls}
+            placeholder="https://www.youtube.com/watch?v=your-video-id"
+            validation={{
+              title: "YouTube Videos Required",
+              description: "Upload your videos to YouTube and share the link here.",
+              example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            }}
+            icon={<Link size={16} />}
+          />
 
-          {/* Videos Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Videos
-            </label>
-            <div className="flex space-x-2 mb-3">
-              <TabButton
-                type="videos"
-                mode="upload"
-                label="Upload Files"
-                icon={<Upload size={16} />}
-              />
-              <TabButton
-                type="videos"
-                mode="url"
-                label="Add URLs"
-                icon={<Link size={16} />}
-              />
-            </div>
-
-            {activeTab.videos === 'upload' ? (
-              <div>
-                <input
-                  type="file"
-                  accept="video/*"
-                  multiple
-                  onChange={(e) => handleFileChange(e, 'videos')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">MP4, AVI, MOV up to 50MB each</p>
-                
-                {videos.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {videos.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <span className="text-sm text-gray-700">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index, 'videos')}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {videoUrls.map((url, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => handleUrlChange(index, e.target.value, 'videos')}
-                      placeholder="https://youtube.com/watch?v=... or upload MP4"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {videoUrls.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeUrlField(index, 'videos')}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addUrlField('videos')}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
-                >
-                  <Plus size={16} />
-                  <span>Add Another URL</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Documents Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Documents
-            </label>
-            <div className="flex space-x-2 mb-3">
-              <TabButton
-                type="documents"
-                mode="upload"
-                label="Upload Files"
-                icon={<Upload size={16} />}
-              />
-              <TabButton
-                type="documents"
-                mode="url"
-                label="Add URLs"
-                icon={<Link size={16} />}
-              />
-            </div>
-
-            {activeTab.documents === 'upload' ? (
-              <div>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
-                  multiple
-                  onChange={(e) => handleFileChange(e, 'documents')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, TXT, PPT up to 10MB each</p>
-                
-                {documents.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {documents.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <span className="text-sm text-gray-700">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index, 'documents')}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {documentUrls.map((url, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => handleUrlChange(index, e.target.value, 'documents')}
-                      placeholder="https://drive.google.com/... or upload PDF"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {documentUrls.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeUrlField(index, 'documents')}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addUrlField('documents')}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
-                >
-                  <Plus size={16} />
-                  <span>Add Another URL</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <UrlSection
+            title="Documents"
+            type="documents"
+            urls={documentUrls}
+            placeholder="https://drive.google.com/file/d/your-document-id/view"
+            validation={{
+              title: "Google Drive Documents Required",
+              description: "Upload your documents to Google Drive and share the link here.",
+              example: "https://drive.google.com/file/d/1XYZ789.../view"
+            }}
+            icon={<Link size={16} />}
+          />
 
           {/* Submit Button */}
           <div className="flex justify-end space-x-4">
@@ -551,7 +368,7 @@ const handleSubmit = async (e) => {
               disabled={loading}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Uploading...' : 'Upload Project'}
+              {loading ? 'Creating Project...' : 'Create Project'}
             </button>
           </div>
         </form>
