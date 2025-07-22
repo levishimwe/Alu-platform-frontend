@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-
 import { useAuth } from '../../context/AuthContext';
-import { Search, Menu, X } from 'lucide-react';
-const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
+import { Search, Menu, X, User, MessageSquare } from 'lucide-react';
 
+const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, logout } = useAuth();
 
   const handleAuthRequiredClick = (targetPage) => {
@@ -15,9 +15,32 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
     }
   };
 
+  // Fix profile navigation - use setCurrentPage instead of navigate
+  const handleViewProfile = () => {
+    if (user?.userType === 'graduate') {
+      setCurrentPage('graduate-profile');
+    } else if (user?.userType === 'investor') {
+      setCurrentPage('investor-profile');
+    }
+    setShowUserMenu(false);
+  };
+
   const handleLogout = () => {
     logout();
     setCurrentPage('home');
+    setShowUserMenu(false);
+  };
+
+  // Handle dashboard navigation
+  const handleDashboard = () => {
+    if (user?.userType === 'graduate') {
+      setCurrentPage('graduate-dashboard');
+    } else if (user?.userType === 'investor') {
+      setCurrentPage('investor-portal');
+    } else if (user?.userType === 'admin') {
+      setCurrentPage('admin-panel');
+    }
+    setShowUserMenu(false);
   };
 
   return (
@@ -78,6 +101,19 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
                 INVESTORS
               </button>
 
+              {/* ✅ NEW: Messages button - only show for authenticated users */}
+              {user && (
+                <button 
+                  onClick={() => setCurrentPage('messages')}
+                  className={`flex items-center space-x-1 hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                    currentPage === 'messages' ? 'text-blue-200' : ''
+                  }`}
+                >
+                  <MessageSquare size={16} />
+                  <span>MESSAGES</span>
+                </button>
+              )}
+
               {/* Search Icon */}
               <button className="hover:text-blue-200 p-2">
                 <Search size={20} />
@@ -88,27 +124,59 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
             <div className="hidden md:flex items-center space-x-4">
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm">Hello, {user.firstName}</span>
-                  <button
-                    onClick={() => {
-                      if (user.userType === 'graduate') {
-                        setCurrentPage('graduate-dashboard');
-                      } else if (user.userType === 'investor') {
-                        setCurrentPage('investor-portal');
-                      } else if (user.userType === 'admin') {
-                        setCurrentPage('admin-panel');
-                      }
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium"
-                  >
-                    DASHBOARD
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="border border-white hover:bg-white hover:text-blue-600 px-4 py-2 rounded text-sm font-medium"
-                  >
-                    LOGOUT
-                  </button>
+                  <span className="text-sm">Hello, {user.firstName || user.email}</span>
+                  
+                  {/* User Dropdown Menu */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-medium"
+                    >
+                      <User size={16} />
+                      <span>Account</span>
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {showUserMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border">
+                        <div className="py-1">
+                          <button
+                            onClick={handleViewProfile}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            My Profile
+                          </button>
+                          
+                          {/* ✅ NEW: Messages link in dropdown */}
+                          <button
+                            onClick={() => {
+                              setCurrentPage('messages');
+                              setShowUserMenu(false);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Messages
+                          </button>
+                          
+                          <button
+                            onClick={handleDashboard}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Dashboard
+                          </button>
+                          
+                          <hr className="my-1" />
+                          
+                          <button
+                            onClick={handleLogout}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Logout
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button
@@ -182,28 +250,50 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
             >
               INVESTORS
             </button>
+
+            {/* ✅ NEW: Messages button for mobile - only show for authenticated users */}
+            {user && (
+              <button
+                onClick={() => {
+                  setCurrentPage('messages');
+                  setIsMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2 w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                  currentPage === 'messages' ? 'bg-blue-700' : ''
+                }`}
+              >
+                <MessageSquare size={16} />
+                <span>MESSAGES</span>
+              </button>
+            )}
             
             <div className="border-t border-blue-700 pt-4 mt-4">
               {user ? (
                 <div className="space-y-2">
                   <div className="px-3 py-2 text-sm text-blue-200">
-                    Hello, {user.firstName}
+                    Hello, {user.firstName || user.email}
                   </div>
+                  
                   <button
                     onClick={() => {
-                      if (user.userType === 'graduate') {
-                        setCurrentPage('graduate-dashboard');
-                      } else if (user.userType === 'investor') {
-                        setCurrentPage('investor-portal');
-                      } else if (user.userType === 'admin') {
-                        setCurrentPage('admin-panel');
-                      }
+                      handleViewProfile();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 rounded"
+                  >
+                    MY PROFILE
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleDashboard();
                       setIsMenuOpen(false);
                     }}
                     className="block w-full text-left px-3 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 rounded"
                   >
                     DASHBOARD
                   </button>
+                  
                   <button
                     onClick={() => {
                       handleLogout();

@@ -12,6 +12,7 @@ const { testConnection } = require('./config/database');
 // Import routes (REMOVE users route)
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
+const profileRoutes = require('./routes/profiles');
 
 const app = express();
 const PORT = process.env.PORT || 5000
@@ -66,6 +67,7 @@ if (process.env.NODE_ENV !== 'production') {
 // API routes (ONLY auth and projects)
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/profiles', profileRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
