@@ -8,17 +8,20 @@ import AdminPanel from "./components/admin/AdminPanel";
 import AuthModal from "./components/auth/AuthModal";
 import Footer from "./components/common/Footer";
 import ProjectForm from "./components/projects/ProjectForm";
+import GraduateProfile from './components/profile/GraduateProfile';
+import InvestorProfile from './components/profile/InvestorProfile';
+import MessageCenter from './components/messaging/MessageCenter';
 import "./styles/index.css";
 
 const AppContent = () => {
   const [currentPage, setCurrentPage] = useState("home");
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: "login" });
-  const [editingProject, setEditingProject] = useState(null); // For editing projects
+  const [editingProject, setEditingProject] = useState(null);
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
     if (user) {
-      // Only auto-redirect on initial login, not every time user state changes
+      
       if (currentPage === "home") {
         if (user.userType === "graduate") {
           setCurrentPage("graduate-dashboard");
@@ -31,7 +34,7 @@ const AppContent = () => {
     }
   }, [user]);
 
-  // Add click listener for auth triggers
+
   useEffect(() => {
     const handleAuthTrigger = (e) => {
       if (e.target.hasAttribute('data-auth-trigger')) {
@@ -39,7 +42,7 @@ const AppContent = () => {
         if (!user) {
           setAuthModal({ isOpen: true, mode: 'login' });
         } else {
-          setCurrentPage('investor-portal'); // Navigate to projects
+          setCurrentPage('investor-portal');
         }
       }
     };
@@ -47,10 +50,20 @@ const AppContent = () => {
     document.addEventListener('click', handleAuthTrigger);
     return () => document.removeEventListener('click', handleAuthTrigger);
   }, [user]);
-
-  // Authentication check for protected pages
-  const handlePageNavigation = (targetPage) => {
-    const protectedPages = ['graduate-dashboard', 'investor-portal', 'admin-panel', 'graduates', 'create-project', 'edit-project'];
+const handlePageNavigation = (targetPage) => {
+    // ✅ UPDATED: Added messages and profile to protected pages
+    const protectedPages = [
+      'graduate-dashboard', 
+      'investor-portal', 
+      'admin-panel', 
+      'graduates', 
+      'create-project', 
+      'edit-project',
+      'graduate-profile',
+      'investor-profile',
+      'messages',
+      'profile'
+    ];
     
     if (protectedPages.includes(targetPage) && !user) {
       setAuthModal({ isOpen: true, mode: 'login' });
@@ -59,9 +72,7 @@ const AppContent = () => {
     
     setCurrentPage(targetPage);
   };
-
-  // Handle project creation/editing
-  const handleProjectSubmit = async (projectData) => {
+const handleProjectSubmit = async (projectData) => {
     try {
       const token = localStorage.getItem('token');
       const url = editingProject 
@@ -81,16 +92,15 @@ const AppContent = () => {
 
       if (response.ok) {
         setEditingProject(null);
-        setCurrentPage('graduate-dashboard'); // Redirect back to dashboard
-        // You might want to show a success message here
+        setCurrentPage('graduate-dashboard');
       } else {
         const error = await response.json();
         console.error('Project submission failed:', error);
-        // Handle error (show error message)
+
       }
     } catch (error) {
       console.error('Project submission error:', error);
-      // Handle error
+
     }
   };
 
@@ -140,6 +150,79 @@ const AppContent = () => {
             onEditProject={handleEditProject}
           />
         );
+
+      case "graduate-profile":
+        if (!user || user.userType !== "graduate") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need to be logged in as a graduate to access your profile.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <GraduateProfile />;
+
+      case "investor-profile":
+        if (!user || user.userType !== "investor") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need to be logged in as an investor to access your profile.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <InvestorProfile />;
+
+      // ✅ NEW: Unified profile route
+      case "profile":
+        if (!user) {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-4">Please log in to access your profile.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        
+        // Automatically render the correct profile based on user type
+        if (user.userType === 'graduate') {
+          return <GraduateProfile />;
+        } else if (user.userType === 'investor') {
+          return <InvestorProfile />;
+        } else {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Profile Not Available</h2>
+                <p className="text-gray-600 mb-4">Profile not available for your user type.</p>
+              </div>
+            </div>
+          );
+        }
         
       case "create-project":
         if (!user || user.userType !== "graduate") {
@@ -261,7 +344,26 @@ const AppContent = () => {
             </div>
           </div>
         );
-        
+
+      case "messages":
+        if (!user) {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-4">Please log in to access messages.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <MessageCenter />;
+
       default:
         return <Homepage />;
     }
