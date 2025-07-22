@@ -1,21 +1,13 @@
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const Message = sequelize.define('Message', {
+  const Conversation = sequelize.define('Conversation', {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true
     },
-    conversationId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Conversations',
-        key: 'id'
-      }
-    },
-    senderId: {
+    user1Id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -23,18 +15,18 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
-    content: {
-      type: DataTypes.TEXT,
-      allowNull: false
-    },
-    read: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
+    user2Id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
     }
   }, {
-    tableName: 'Messages',
+    tableName: 'Conversations',
     timestamps: true
   });
 
-  return Message;
+  return Conversation;
 };
