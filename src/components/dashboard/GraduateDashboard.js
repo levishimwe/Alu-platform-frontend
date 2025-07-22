@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, FileText, Eye, Heart } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext'; // Add this import
+import { useAuth } from '../../context/AuthContext';
 import ProjectCard from "../common/ProjectCard";
 import ProjectUploadModal from "./ProjectUploadModal";
+import ProjectDetails from "../projects/ProjectDetails"; // ✅ Add this import
 
 const GraduateDashboard = () => {
-  const { user } = useAuth(); // Get current user
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // ✅ Add these states for ProjectDetails modal
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showProjectDetails, setShowProjectDetails] = useState(false);
 
   // Fetch projects function - filter by current user's projects
   const fetchProjects = async () => {
@@ -72,10 +77,17 @@ const GraduateDashboard = () => {
     setIsUploadModalOpen(false);
   };
 
-  // Handle view project details
+  // ✅ Update this function to open ProjectDetails modal
   const handleViewDetails = (project) => {
-    console.log('View project details:', project);
-    // You can implement a modal or navigation here
+    console.log('📊 Opening project details for:', project);
+    setSelectedProject(project);
+    setShowProjectDetails(true);
+  };
+
+  // ✅ Add function to close ProjectDetails modal
+  const handleCloseDetails = () => {
+    setShowProjectDetails(false);
+    setSelectedProject(null);
   };
 
   return (
@@ -195,6 +207,14 @@ const GraduateDashboard = () => {
         onClose={handleCloseUploadModal}
         onSuccess={handleProjectUploadSuccess}
       />
+
+      {/* ✅ Add ProjectDetails Modal */}
+      {showProjectDetails && selectedProject && (
+        <ProjectDetails
+          project={selectedProject}
+          onClose={handleCloseDetails}
+        />
+      )}
     </div>
   );
 };
