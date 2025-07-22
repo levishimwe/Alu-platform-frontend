@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { useSimpleAPI } from "../../hooks/useSimpleAPI";
 import ProjectCard from "../common/ProjectCard";
+import ProjectDetails from "../projects/ProjectDetails"; // ✅ Add this import
 
 const InvestorPortal = () => {
   const { getProjects, loading, error } = useSimpleAPI();
@@ -9,6 +10,10 @@ const InvestorPortal = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedImpactArea, setSelectedImpactArea] = useState("");
+  
+  // ✅ Add these states for ProjectDetails modal
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showProjectDetails, setShowProjectDetails] = useState(false);
 
   // Load projects on component mount
   useEffect(() => {
@@ -23,6 +28,19 @@ const InvestorPortal = () => {
 
     loadProjects();
   }, []);
+
+  // ✅ Add function to open ProjectDetails modal
+  const handleViewDetails = (project) => {
+    console.log('📊 Opening project details for:', project);
+    setSelectedProject(project);
+    setShowProjectDetails(true);
+  };
+
+  // ✅ Add function to close ProjectDetails modal
+  const handleCloseDetails = () => {
+    setShowProjectDetails(false);
+    setSelectedProject(null);
+  };
 
   const categories = [
     "All",
@@ -154,6 +172,7 @@ const InvestorPortal = () => {
             <ProjectCard
               key={project.id}
               project={project}
+              onViewDetails={handleViewDetails} // ✅ Add this prop
               showActions={true}
             />
           ))}
@@ -167,6 +186,14 @@ const InvestorPortal = () => {
           </div>
         )}
       </div>
+
+      {/* ✅ Add ProjectDetails Modal */}
+      {showProjectDetails && selectedProject && (
+        <ProjectDetails
+          project={selectedProject}
+          onClose={handleCloseDetails}
+        />
+      )}
     </div>
   );
 };
