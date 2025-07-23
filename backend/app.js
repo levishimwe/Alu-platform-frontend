@@ -9,18 +9,45 @@ require('dotenv').config();
 
 const { testConnection } = require('./config/database');
 
-// Import routes (REMOVE users route)
+// Import routes
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const profileRoutes = require('./routes/profiles');
+const messageRoutes = require('./routes/messages'); // Add this
+const userRoutes = require('./routes/users'); // Add this
+const models = require('./models');
 
 const app = express();
-const PORT = process.env.PORT || 5000
-// Database connection
+const PORT = process.env.PORT || 5000;
+
+// Database connection and model synchronization
 testConnection()
-  .then((connected) => {
+  .then(async (connected) => {
     if (connected) {
-      console.log("✅ Database connected and models synchronized...");
+      console.log("✅ Database connected successfully...");
+      
+      // Sync models with database (in development)
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          await models.User.sync({ alter: true });
+          console.log("✅ User model synchronized");
+          
+          await models.GraduateProfile.sync({ alter: true });
+          console.log("✅ GraduateProfile model synchronized");
+          
+          await models.InvestorProfile.sync({ alter: true });
+          console.log("✅ InvestorProfile model synchronized");
+          
+          if (models.Project) {
+            await models.Project.sync({ alter: true });
+            console.log("✅ Project model synchronized");
+          }
+          
+          console.log("✅ All models synchronized successfully");
+        } catch (syncError) {
+          console.error("❌ Error synchronizing models:", syncError);
+        }
+      }
     } else {
       console.error("❌ Failed to connect to database");
       process.exit(1);
@@ -51,7 +78,7 @@ const limiter = rateLimit({
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
-  
+
 });
 app.use('/api/', limiter);
 
@@ -64,17 +91,19 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// API routes (ONLY auth and projects)
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/messages', messageRoutes); // Add this
+app.use('/api/users', userRoutes); // Add this
 
 // API info endpoint
 app.get('/api', (req, res) => {
   res.json({
     message: 'ALU Platform API - Google Drive Integration',
     version: '2.0.0',
-    features: ['Google Drive image links', 'Google email validation'],
+    features: ['Google Drive image links', 'Google email validation', 'Profile management'],
     endpoints: {
       health: '/api/health',
       auth: {
@@ -87,6 +116,16 @@ app.get('/api', (req, res) => {
         create: 'POST /api/projects',
         list: 'GET /api/projects',
         get: 'GET /api/projects/:id'
+      },
+      profiles: {
+        graduate: {
+          get: 'GET /api/profiles/graduate/:id',
+          update: 'PUT /api/profiles/graduate'
+        },
+        investor: {
+          get: 'GET /api/profiles/investor/:id',
+          update: 'PUT /api/profiles/investor'
+        }
       }
     },
     status: 'operational'
@@ -102,7 +141,8 @@ app.get('/api/health', (req, res) => {
     database: 'connected',
     features: {
       googleDriveIntegration: true,
-      googleEmailValidation: true
+      googleEmailValidation: true,
+      profileManagement: true
     }
   });
 });
@@ -116,11 +156,14 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       projects: '/api/projects',
+      profiles: '/api/profiles',
       health: '/api/health'
     },
     requirements: {
       email: 'Google emails only (@gmail.com, @googlemail.com)',
-      images: 'Google Drive links only'
+      images: 'Google Drive links only',
+      university: 'African Leadership University only',
+      majors: 'BSE, BEL, IBT only'
     }
   });
 });
@@ -148,8 +191,11 @@ app.listen(PORT, () => {
   console.log(`🌐 API base: http://localhost:${PORT}/api`);
   console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
   console.log(`📁 Projects endpoints: http://localhost:${PORT}/api/projects`);
+  console.log(`👤 Profile endpoints: http://localhost:${PORT}/api/profiles`);
   console.log(`✉️ Email restriction: Google emails only`);
   console.log(`🖼️ Image hosting: Google Drive links only`);
+  console.log(`🎓 University restriction: African Leadership University only`);
+  console.log(`📚 Major restriction: BSE, BEL, IBT only`);
 });
 
 module.exports = app;

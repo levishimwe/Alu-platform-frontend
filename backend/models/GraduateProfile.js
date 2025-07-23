@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 
-
 module.exports = (sequelize) => {
   const GraduateProfile = sequelize.define('GraduateProfile', {
     id: {
@@ -41,6 +40,10 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    university: {  // Add this field if it doesn't exist
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     graduationYear: {
       type: DataTypes.INTEGER,
       allowNull: true
@@ -50,9 +53,8 @@ module.exports = (sequelize) => {
       allowNull: true
     },
     skills: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     linkedinUrl: {
       type: DataTypes.STRING,
@@ -67,14 +69,12 @@ module.exports = (sequelize) => {
       allowNull: true
     },
     experience: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     achievements: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     tableName: 'GraduateProfiles',
