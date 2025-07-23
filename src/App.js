@@ -11,6 +11,7 @@ import ProjectForm from "./components/projects/ProjectForm";
 import GraduateProfile from './components/profile/GraduateProfile';
 import InvestorProfile from './components/profile/InvestorProfile';
 import MessageCenter from './components/messaging/MessageCenter';
+import ContactModal from './components/messaging/ContactModal';
 import "./styles/index.css";
 
 const AppContent = () => {
