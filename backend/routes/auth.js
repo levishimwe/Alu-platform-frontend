@@ -1,6 +1,6 @@
 // Import necessary modules 
 const express = require('express');
-
+const bcrypt = require('bcrypt'); // Add this line
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { User } = require('../models');
@@ -82,10 +82,21 @@ router.post('/register', [
     .withMessage('Please provide a valid graduation year'),
 
   // Investor-specific validations
-  body('companyWebsite')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
-    .isURL()
-    .withMessage('Please provide a valid company website URL'),
+body('companyWebsite')
+  .optional({ nullable: true, checkFalsy: true })
+  .customSanitizer((value) => {
+    // Trim whitespace and add https:// if not present
+    if (value && value.trim()) {
+      let trimmed = value.trim();
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        trimmed = 'https://' + trimmed;
+      }
+      return trimmed;
+    }
+    return value;
+  })
+  .isURL()
+  .withMessage('Please provide a valid company website URL'),
 
   // Location validations
   body('country')
