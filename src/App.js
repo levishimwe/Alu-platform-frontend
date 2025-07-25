@@ -5,36 +5,34 @@ import Homepage from "./components/pages/Homepage";
 import GraduateDashboard from "./components/dashboard/GraduateDashboard";
 import InvestorPortal from "./components/investor/InvestorPortal";
 import AdminPanel from "./components/admin/AdminPanel";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import ContactUs from "./components/pages/ContactUs";
 import AuthModal from "./components/auth/AuthModal";
 import Footer from "./components/common/Footer";
 import ProjectForm from "./components/projects/ProjectForm";
 import GraduateProfile from './components/profile/GraduateProfile';
 import InvestorProfile from './components/profile/InvestorProfile';
 import MessageCenter from './components/messaging/MessageCenter';
-import ContactModal from './components/messaging/ContactModal';
+
 import "./styles/index.css";
 
 const AppContent = () => {
   const [currentPage, setCurrentPage] = useState("home");
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: "login" });
   const [editingProject, setEditingProject] = useState(null);
-  const { user, isLoading } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      
-      if (currentPage === "home") {
-        if (user.userType === "graduate") {
-          setCurrentPage("graduate-dashboard");
-        } else if (user.userType === "investor") {
-          setCurrentPage("investor-portal");
-        } else if (user.userType === "admin") {
-          setCurrentPage("admin-panel");
-        }
+    if (user && currentPage === "home") {
+      if (user.userType === "graduate") {
+        setCurrentPage("graduate-dashboard");
+      } else if (user.userType === "investor") {
+        setCurrentPage("investor-portal");
+      } else if (user.userType === "admin") {
+        setCurrentPage("admin-dashboard"); // Changed from admin-panel to admin-dashboard
       }
     }
-  }, [user]);
-
+  }, [user, currentPage]);
 
   useEffect(() => {
     const handleAuthTrigger = (e) => {
@@ -51,12 +49,13 @@ const AppContent = () => {
     document.addEventListener('click', handleAuthTrigger);
     return () => document.removeEventListener('click', handleAuthTrigger);
   }, [user]);
-const handlePageNavigation = (targetPage) => {
-    // ✅ UPDATED: Added messages and profile to protected pages
+
+  const handlePageNavigation = (targetPage) => {
     const protectedPages = [
       'graduate-dashboard', 
       'investor-portal', 
-      'admin-panel', 
+      'admin-panel',
+      'admin-dashboard', // Add this
       'graduates', 
       'create-project', 
       'edit-project',
@@ -73,7 +72,8 @@ const handlePageNavigation = (targetPage) => {
     
     setCurrentPage(targetPage);
   };
-const handleProjectSubmit = async (projectData) => {
+
+  const handleProjectSubmit = async (projectData) => {
     try {
       const token = localStorage.getItem('token');
       const url = editingProject 
@@ -128,6 +128,12 @@ const handleProjectSubmit = async (projectData) => {
 
   const renderPage = () => {
     switch (currentPage) {
+      case "home":
+        return <Homepage onNavigate={setCurrentPage} />;
+
+      case "contact":
+        return <ContactUs />;
+
       case "graduate-dashboard":
         if (!user || user.userType !== "graduate") {
           return (
@@ -151,6 +157,63 @@ const handleProjectSubmit = async (projectData) => {
             onEditProject={handleEditProject}
           />
         );
+
+      case "investor-portal":
+        if (!user) {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-4">Please log in to view projects and investor portal.</p>
+                <button
+                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <InvestorPortal />;
+
+      case "admin-dashboard":
+        if (!user || user.userType !== "admin") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Go Home
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <AdminDashboard />;
+
+      case "admin-panel":
+        if (!user || user.userType !== "admin") {
+          return (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                >
+                  Go Home
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <AdminPanel />;
 
       case "graduate-profile":
         if (!user || user.userType !== "graduate") {
@@ -190,7 +253,7 @@ const handleProjectSubmit = async (projectData) => {
         }
         return <InvestorProfile />;
 
-      // ✅ NEW: Unified profile route
+
       case "profile":
         if (!user) {
           return (
@@ -208,8 +271,8 @@ const handleProjectSubmit = async (projectData) => {
             </div>
           );
         }
+
         
-        // Automatically render the correct profile based on user type
         if (user.userType === 'graduate') {
           return <GraduateProfile />;
         } else if (user.userType === 'investor') {
@@ -279,44 +342,7 @@ const handleProjectSubmit = async (projectData) => {
           </div>
         );
         
-      case "investor-portal":
-        if (!user) {
-          return (
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-4">Please log in to view projects and investor portal.</p>
-                <button
-                  onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-                >
-                  Login
-                </button>
-              </div>
-            </div>
-          );
-        }
-        return <InvestorPortal />;
-        
-      case "admin-panel":
-        if (!user || user.userType !== "admin") {
-          return (
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-                <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
-                <button
-                  onClick={() => setCurrentPage('home')}
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-                >
-                  Go Home
-                </button>
-              </div>
-            </div>
-          );
-        }
-        return <AdminPanel />;
-        
+    
       case "graduates":
         if (!user) {
           return (
@@ -366,11 +392,11 @@ const handleProjectSubmit = async (projectData) => {
         return <MessageCenter />;
 
       default:
-        return <Homepage />;
+        return <Homepage onNavigate={setCurrentPage} />;
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
         currentPage={currentPage}
@@ -386,7 +412,10 @@ const handleProjectSubmit = async (projectData) => {
         onSwitchMode={(mode) => setAuthModal({ isOpen: true, mode })}
       />
 
-      <Footer />
+      <Footer 
+        setCurrentPage={handlePageNavigation}
+        setAuthModal={setAuthModal}
+      />
     </div>
   );
 };

@@ -1,17 +1,30 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-export default function Footer() {
+export default function Footer({ setCurrentPage, setAuthModal }) {
   const { user } = useAuth();
 
-  const handleAuthRequiredClick = (e, targetPath) => {
-    e.preventDefault();
+  const handleAuthRequiredNavigation = (targetPage) => {
     if (!user) {
-      // If not logged in, redirect to login
-      window.location.href = '/login';
+      // If not logged in, show auth modal
+      if (setAuthModal) {
+        setAuthModal({ isOpen: true, mode: 'login' });
+      } else {
+        alert('Please log in to access this feature.');
+      }
     } else {
-      // If logged in, navigate to the target path
-      window.location.href = targetPath;
+      // If logged in, navigate to the target page
+      if (setCurrentPage) {
+        setCurrentPage(targetPage);
+      }
+    }
+  };
+
+  const handleContactUs = () => {
+    if (setCurrentPage) {
+      setCurrentPage('contact');
+    } else {
+      alert(`Contact Information:\n\nName: Levis Ishimwe\nPhone: +250 784 106 595\nEmail: i.levis@alustudent.com`);
     }
   };
 
@@ -30,55 +43,52 @@ export default function Footer() {
           <h3 className="text-lg font-semibold mb-2">For Graduates</h3>
           <ul className="text-sm space-y-1">
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button 
+                className="hover:underline text-left"
+                onClick={() => {
                   if (!user) {
-                    alert('Please log in to access graduate features.');
+                    handleAuthRequiredNavigation('graduate-dashboard');
                   } else if (user.userType === 'graduate') {
-                    // Navigate to graduate dashboard
-                    window.location.reload(); // This will trigger the navigation in your app
+                    handleAuthRequiredNavigation('create-project');
                   } else {
                     alert('This feature is only available for graduates.');
                   }
                 }}
               >
                 Upload Projects
-              </a>
+              </button>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button 
+                className="hover:underline text-left"
+                onClick={() => {
                   if (!user) {
-                    alert('Please log in to access your dashboard.');
-                  } else {
-                    window.location.reload(); // This will trigger the navigation in your app
+                    handleAuthRequiredNavigation('graduate-dashboard');
+                  } else if (user.userType === 'graduate') {
+                    handleAuthRequiredNavigation('graduate-dashboard');
+                  } else if (user.userType === 'investor') {
+                    handleAuthRequiredNavigation('investor-portal');
+                  } else if (user.userType === 'admin') {
+                    handleAuthRequiredNavigation('admin-dashboard');
                   }
                 }}
               >
                 Dashboard
-              </a>
+              </button>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button 
+                className="hover:underline text-left"
+                onClick={() => {
                   if (!user) {
-                    alert('Please log in to access resources.');
+                    handleAuthRequiredNavigation('home');
                   } else {
                     alert('Resources page coming soon!');
                   }
                 }}
               >
                 Resources
-              </a>
+              </button>
             </li>
           </ul>
         </div>
@@ -87,20 +97,12 @@ export default function Footer() {
           <h3 className="text-lg font-semibold mb-2">For Investors</h3>
           <ul className="text-sm space-y-1">
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!user) {
-                    alert('Please log in to browse projects.');
-                  } else {
-                    window.location.reload(); // This will trigger navigation to investor portal
-                  }
-                }}
+              <button 
+                className="hover:underline text-left"
+                onClick={() => handleAuthRequiredNavigation('investor-portal')}
               >
                 Browse Projects
-              </a>
+              </button>
             </li>
             <li>
               <a 
@@ -113,20 +115,18 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button 
+                className="hover:underline text-left"
+                onClick={() => {
                   if (!user) {
-                    alert('Please log in to view success stories.');
+                    handleAuthRequiredNavigation('investor-portal');
                   } else {
                     alert('Success Stories page coming soon!');
                   }
                 }}
               >
                 Success Stories
-              </a>
+              </button>
             </li>
           </ul>
         </div>
@@ -145,32 +145,22 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert(`Contact Information:\n\nName: Levis Ishimwe\nPhone: +250 784 106 595\nEmail: i.levis@alustudent.com`);
-                }}
+              <button 
+                className="hover:underline text-left"
+                onClick={handleContactUs}
               >
                 Contact Us
-              </a>
+              </button>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!user) {
-                    alert('Please log in to view privacy policy.');
-                  } else {
-                    alert('Privacy Policy page coming soon!');
-                  }
+              <button 
+                className="hover:underline text-left"
+                onClick={() => {
+                  alert('Privacy Policy page coming soon!');
                 }}
               >
                 Privacy Policy
-              </a>
+              </button>
             </li>
           </ul>
         </div>

@@ -1,95 +1,49 @@
-const { DataTypes } = require('sequelize');
-
+const { DataTypes, Model } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const InvestorProfile = sequelize.define('InvestorProfile', {
+  class InvestorProfile extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+
+  InvestorProfile.init({
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
+      autoIncrement: true
     },
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      unique: true,
+      allowNull: true, // ✅ Changed from false to true to allow SET NULL
       references: {
         model: 'Users',
         key: 'id'
       }
     },
-    firstName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    lastName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    location: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    bio: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    company: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    position: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    companySize: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    industryFocus: {
+    investmentFocus: {
       type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+      allowNull: true
     },
     investmentRange: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    investmentStage: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
-    },
-    linkedinUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    websiteUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    investmentCriteria: {
-      type: DataTypes.TEXT,
+      type: DataTypes.STRING(100),
       allowNull: true
     },
     portfolio: {
       type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+      allowNull: true
     },
-    areasOfInterest: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: []
+    linkedinProfile: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
+    sequelize,
+    modelName: 'InvestorProfile',
     tableName: 'InvestorProfiles',
     timestamps: true
   });

@@ -1,6 +1,6 @@
 // Import necessary modules 
 const express = require('express');
-const bcrypt = require('bcrypt'); // Add this line
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { User } = require('../models');
@@ -18,13 +18,14 @@ const countries = [
   'Zambia', 'Zimbabwe', 'Other'
 ];
 
-// Validation middleware for Google email
-const validateGoogleEmail = (email) => {
+// Validation middleware for Google email (only for non-admin users)
+const validateGoogleEmail = (email, userType) => {
+  if (userType === 'admin') return true; // Skip Google email validation for admin
   const googleDomains = ['@gmail.com', '@googlemail.com'];
   return googleDomains.some(domain => email.toLowerCase().endsWith(domain));
 };
 
-// Register route
+// **SINGLE REGISTER ROUTE** - handles all user types including admin
 router.post('/register', [
   body('firstName')
     .trim()
@@ -40,8 +41,9 @@ router.post('/register', [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email')
-    .custom((email) => {
-      if (!validateGoogleEmail(email)) {
+    .custom((email, { req }) => {
+      const userType = req.body.userType;
+      if (!validateGoogleEmail(email, userType)) {
         throw new Error('This email is not accepted. Please use a Google email address (@gmail.com or @googlemail.com)');
       }
       return true;
@@ -50,15 +52,35 @@ router.post('/register', [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+    .custom((password, { req }) => {
+      const userType = req.body.userType;
+      // Skip complex password validation for admin (they use secret key)
+      if (userType === 'admin') return true;
+      
+      // For regular users, enforce strong password
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+        throw new Error('Password must contain at least one lowercase letter, one uppercase letter, and one number');
+      }
+      return true;
+    }),
   
   body('userType')
-    .isIn(['graduate', 'investor'])
-    .withMessage('User type must be either graduate or investor'),
+    .isIn(['graduate', 'investor', 'admin'])
+    .withMessage('User type must be either graduate, investor, or admin'),
+  
+  // Admin secret key validation
+  body('adminSecretKey')
+    .custom((value, { req }) => {
+      if (req.body.userType === 'admin') {
+        if (value !== '12345@#@@@@@@@@!!!!wwwgggh.') {
+          throw new Error('Invalid admin secret key');
+        }
+      }
+      return true;
+    }),
   
   body('profileImage')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
+    .optional({ nullable: true, checkFalsy: true })
     .custom((url) => {
       if (url && !url.includes('drive.google.com')) {
         throw new Error('Profile image must be a Google Drive link');
@@ -68,7 +90,7 @@ router.post('/register', [
 
   // Graduate-specific validations
   body('degreeCertificate')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
+    .optional({ nullable: true, checkFalsy: true })
     .custom((url) => {
       if (url && !url.includes('drive.google.com')) {
         throw new Error('Degree certificate must be a Google Drive link');
@@ -77,45 +99,44 @@ router.post('/register', [
     }),
 
   body('graduationYear')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
+    .optional({ nullable: true, checkFalsy: true })
     .isInt({ min: 1950, max: new Date().getFullYear() + 10 })
     .withMessage('Please provide a valid graduation year'),
 
   // Investor-specific validations
-body('companyWebsite')
-  .optional({ nullable: true, checkFalsy: true })
-  .customSanitizer((value) => {
-    // Trim whitespace and add https:// if not present
-    if (value && value.trim()) {
-      let trimmed = value.trim();
-      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-        trimmed = 'https://' + trimmed;
+  body('companyWebsite')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((value) => {
+      if (value && value.trim()) {
+        let trimmed = value.trim();
+        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+          trimmed = 'https://' + trimmed;
+        }
+        return trimmed;
       }
-      return trimmed;
-    }
-    return value;
-  })
-  .isURL()
-  .withMessage('Please provide a valid company website URL'),
+      return value;
+    })
+    .isURL()
+    .withMessage('Please provide a valid company website URL'),
 
   // Location validations
   body('country')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
+    .optional({ nullable: true, checkFalsy: true })
     .isIn(countries)
     .withMessage('Please select a valid country'),
 
   body('city')
-    .optional({ nullable: true, checkFalsy: true }) // ✅ Skip validation for empty values
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('City must be between 2 and 100 characters'),
     
 ], async (req, res) => {
   try {
-    // Add detailed logging
+
     console.log('📝 Registration attempt:', {
-      body: req.body,
-      headers: req.headers['content-type']
+      userType: req.body.userType,
+      email: req.body.email
     });
 
     // Check for validation errors
@@ -145,9 +166,8 @@ body('companyWebsite')
       city
     } = req.body;
 
-    console.log('📋 Extracted fields:', {
-      firstName, lastName, email, userType, country, city
-    });
+
+    
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -156,35 +176,42 @@ body('companyWebsite')
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    // Create new user with all fields
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user data based on user type
     const userData = {
 
       firstName,
       lastName,
       email,
-      password,
+      password: hashedPassword,
       userType,
-      profileImage,
-      bio,
-      country,
-      city
+      isActive: true
     };
 
-    // Add graduate-specific fields
-    if (userType === 'graduate') {
-      if (university) userData.university = university;
-      if (graduationYear) userData.graduationYear = graduationYear;
-      if (degreeCertificate) userData.degreeCertificate = degreeCertificate;
+    // Add fields only for non-admin users
+    if (userType !== 'admin') {
+      if (profileImage) userData.profileImage = profileImage;
+      if (bio) userData.bio = bio;
+      if (country) userData.country = country;
+      if (city) userData.city = city;
+
+      // Add graduate-specific fields
+      if (userType === 'graduate') {
+        if (university) userData.university = university;
+        if (graduationYear) userData.graduationYear = graduationYear;
+        if (degreeCertificate) userData.degreeCertificate = degreeCertificate;
+      }
+
+      // Add investor-specific fields
+      if (userType === 'investor') {
+        if (companyName) userData.companyName = companyName;
+        if (companyWebsite) userData.companyWebsite = companyWebsite;
+      }
     }
 
-    // Add investor-specific fields
-    if (userType === 'investor') {
-      if (companyName) userData.companyName = companyName;
-      if (companyWebsite) userData.companyWebsite = companyWebsite;
-    }
-
-    console.log('👤 Creating user with data:', userData);
-
+    console.log('👤 Creating user with data:', { ...userData, password: '[HIDDEN]' });
 
     const user = await User.create(userData);
 
@@ -201,24 +228,27 @@ body('companyWebsite')
       { expiresIn: '24h' }
     );
 
-    // Remove password from response
+    // Prepare response (exclude password)
     const userResponse = {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       userType: user.userType,
-      profileImage: user.profileImage,
-      bio: user.bio,
-      university: user.university,
-      graduationYear: user.graduationYear,
-      degreeCertificate: user.degreeCertificate,
-      companyName: user.companyName,
-      companyWebsite: user.companyWebsite,
-      country: user.country,
-      city: user.city,
+      isActive: user.isActive,
       createdAt: user.createdAt
     };
+
+    // Add optional fields if they exist
+    if (user.profileImage) userResponse.profileImage = user.profileImage;
+    if (user.bio) userResponse.bio = user.bio;
+    if (user.university) userResponse.university = user.university;
+    if (user.graduationYear) userResponse.graduationYear = user.graduationYear;
+    if (user.degreeCertificate) userResponse.degreeCertificate = user.degreeCertificate;
+    if (user.companyName) userResponse.companyName = user.companyName;
+    if (user.companyWebsite) userResponse.companyWebsite = user.companyWebsite;
+    if (user.country) userResponse.country = user.country;
+    if (user.city) userResponse.city = user.city;
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -230,12 +260,11 @@ body('companyWebsite')
     console.error('💥 Registration error details:', {
       name: error.name,
       message: error.message,
-      stack: error.stack,
-      errors: error.errors
+      stack: error.stack
     });
     
     if (error.name === 'SequelizeValidationError') {
-      console.log('🔍 Sequelize validation errors:', error.errors);
+      
       return res.status(400).json({
         error: 'Validation failed',
         details: error.errors.map(err => ({
@@ -251,7 +280,7 @@ body('companyWebsite')
     }
 
     if (error.name === 'SequelizeDatabaseError') {
-      console.log('🔍 Database error:', error.message);
+
       return res.status(500).json({ error: 'Database error: ' + error.message });
     }
 
@@ -264,20 +293,14 @@ router.post('/login', [
   body('email')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email')
-    .custom((email) => {
-      if (!validateGoogleEmail(email)) {
-        throw new Error('This email is not accepted. Please use a Google email address (@gmail.com or @googlemail.com)');
-      }
-      return true;
-    }),
+    .withMessage('Please provide a valid email'),
   
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
 ], async (req, res) => {
   try {
-    // Check for validation errors
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -547,12 +570,11 @@ router.put('/change-password', auth, [
   }
 });
 
-// Logout route (optional - mainly for client-side token clearing)
+// Logout route
 router.post('/logout', auth, async (req, res) => {
   try {
-    // In a JWT implementation, logout is mainly handled client-side
-    // But we can update the user's lastLogin or add to a blacklist if needed
-    
+
+
     res.json({ message: 'Logout successful' });
   } catch (error) {
     console.error('Logout error:', error);
