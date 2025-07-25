@@ -50,6 +50,7 @@ const InvestorPortal = () => {
     "healthcare",
     "education",
     "environment",
+    "social impact",
     "other"
   ];
 

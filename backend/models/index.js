@@ -12,23 +12,25 @@ const Project = ProjectModel(sequelize);
 const GraduateProfile = GraduateProfileModel(sequelize);
 const InvestorProfile = InvestorProfileModel(sequelize);
 
-// Define associations
+// Define associations - UPDATED to match your associations.js
 User.hasMany(Project, { 
-  foreignKey: 'userId', 
+  foreignKey: 'graduateId', // ✅ Changed from 'userId' to 'graduateId'
   as: 'projects',
-  onDelete: 'CASCADE'
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE'
 });
 
 Project.belongsTo(User, { 
-  foreignKey: 'userId', 
-  as: 'user'
+  foreignKey: 'graduateId', // ✅ Changed from 'userId' to 'graduateId'
+  as: 'graduate' // ✅ Changed from 'user' to 'graduate'
 });
 
 // Graduate Profile associations
 User.hasOne(GraduateProfile, { 
   foreignKey: 'userId', 
   as: 'graduateProfile',
-  onDelete: 'CASCADE'
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE'
 });
 
 GraduateProfile.belongsTo(User, { 
@@ -40,7 +42,8 @@ GraduateProfile.belongsTo(User, {
 User.hasOne(InvestorProfile, { 
   foreignKey: 'userId', 
   as: 'investorProfile',
-  onDelete: 'CASCADE'
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE'
 });
 
 InvestorProfile.belongsTo(User, { 

@@ -1,99 +1,67 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const Project = sequelize.define('Project', {
+  class Project extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+
+  Project.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
+      autoIncrement: true
     },
     title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notEmpty: true,
-        len: [3, 200],
-      },
+      type: DataTypes.STRING(255),
+      allowNull: false
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false,
-      validate: {
-        notEmpty: true,
-        len: [10, 5000],
-      },
+      allowNull: false
     },
-    category: {
-      type: DataTypes.STRING,
-      allowNull: true, // Made optional to match DB
-      validate: {
-        isIn: [['Technology', 'Healthcare', 'Education', 'Agriculture', 'Finance', 'Environment', 'Social Impact', 'Other']],
-      },
-    },
-    impactArea: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    // ❌ Remove stage field - doesn't exist in DB
-    
-    images: {
-      type: DataTypes.TEXT, // ✅ Change to TEXT to match DB (stores JSON strings)
-      allowNull: true,
-      get() {
-        const value = this.getDataValue('images');
-        return value ? JSON.parse(value) : [];
-      },
-      set(value) {
-        this.setDataValue('images', value ? JSON.stringify(value) : null);
-      }
-    },
-    videos: {
-      type: DataTypes.TEXT, // ✅ Change to TEXT to match DB (stores JSON strings)
-      allowNull: true,
-      get() {
-        const value = this.getDataValue('videos');
-        return value ? JSON.parse(value) : [];
-      },
-      set(value) {
-        this.setDataValue('videos', value ? JSON.stringify(value) : null);
-      }
-    },
-    documents: {
-      type: DataTypes.TEXT, // ✅ Change to TEXT to match DB (stores JSON strings)
-      allowNull: true,
-      get() {
-        const value = this.getDataValue('documents');
-        return value ? JSON.parse(value) : [];
-      },
-      set(value) {
-        this.setDataValue('documents', value ? JSON.stringify(value) : null);
-      }
-    },
-    status: {
-      type: DataTypes.ENUM('draft', 'published', 'under_review'), // ✅ Match DB enum values
-      allowNull: true,
-      defaultValue: 'under_review',
-    },
-    views: {
+    graduateId: { // ✅ Changed from userId to graduateId
       type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-    likes: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-    graduateId: { // ✅ Add this field to match DB
-      type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: true, // ✅ Allow null for SET NULL cascade
       references: {
         model: 'Users',
-        key: 'id',
-      },
+        key: 'id'
+      }
     },
-    // ❌ Remove userId field - doesn't exist in DB
+    technologies: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    status: {
+      type: DataTypes.ENUM('draft', 'pending', 'active', 'completed', 'rejected'),
+      defaultValue: 'draft'
+    },
+    fundingGoal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
+    currentFunding: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0.00
+    },
+    demoUrl: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    repoUrl: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    featured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    }
   }, {
-    timestamps: true,
-    tableName: 'Projects' // ✅ Explicitly set table name
+    sequelize,
+    modelName: 'Project',
+    tableName: 'Projects',
+    timestamps: true
   });
 
   return Project;

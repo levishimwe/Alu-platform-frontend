@@ -1,183 +1,141 @@
-const { DataTypes } = require('sequelize');
-const bcrypt = require('bcryptjs');
+const { DataTypes, Model } = require('sequelize');
+const bcrypt = require('bcrypt');
 
 module.exports = (sequelize) => {
-  const User = sequelize.define('User', {
+  class User extends Model {
+    async comparePassword(password) {
+      return await bcrypt.compare(password, this.password);
+    }
+
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+
+  User.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
+      autoIncrement: true
     },
     firstName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(100),
       allowNull: false,
       validate: {
         notEmpty: true,
-        len: [2, 50],
-      },
+        len: [2, 100]
+      }
     },
     lastName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(100),
       allowNull: false,
       validate: {
         notEmpty: true,
-        len: [2, 50],
-      },
+        len: [2, 100]
+      }
     },
     email: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
       validate: {
-        isEmail: true,
-        isGoogleEmail(value) {
-          if (!value.endsWith('@gmail.com') && !value.endsWith('@googlemail.com')) {
-            throw new Error('This email is not accepted. Please use a Google email address.');
-          }
-        },
-      },
+        isEmail: true
+      }
     },
     password: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        len: [6, 100],
-      },
+        len: [6, 255]
+      }
     },
     userType: {
       type: DataTypes.ENUM('graduate', 'investor', 'admin'),
       allowNull: false,
-      defaultValue: 'graduate',
+      defaultValue: 'graduate'
     },
     profileImage: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      validate: {
-        isGoogleDriveLink(value) {
-          if (value && !value.includes('drive.google.com')) {
-            throw new Error('Profile image must be a Google Drive link');
-          }
-        },
-      },
+      allowNull: true
     },
     bio: {
       type: DataTypes.TEXT,
-      allowNull: true,
+      allowNull: true
     },
     skills: {
       type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: [],
+      allowNull: true
     },
     university: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.STRING(255),
+      allowNull: true
     },
     graduationYear: {
       type: DataTypes.INTEGER,
       allowNull: true,
       validate: {
         min: 1950,
-        max: new Date().getFullYear() + 10,
-      },
+        max: new Date().getFullYear() + 10
+      }
     },
     degreeCertificate: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      validate: {
-        isGoogleDriveLink(value) {
-          if (value && !value.includes('drive.google.com')) {
-            throw new Error('Degree certificate must be a Google Drive link');
-          }
-        },
-      },
+      allowNull: true
     },
-    // Investor-specific fields
     companyName: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.STRING(255),
+      allowNull: true
     },
     companyWebsite: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: {
-        isUrl: true,
-      },
+      type: DataTypes.STRING(255),
+      allowNull: true
     },
-    // Location fields for both graduates and investors
     country: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.STRING(100),
+      allowNull: true
     },
     city: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.STRING(100),
+      allowNull: true
     },
     isActive: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      defaultValue: true
     },
     lastLogin: {
       type: DataTypes.DATE,
-      allowNull: true,
-    },
+      allowNull: true
+    }
   }, {
+    sequelize,
+    modelName: 'User',
+    tableName: 'Users',
     timestamps: true,
     hooks: {
       beforeCreate: async (user) => {
         if (user.password) {
-          const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
-        }
-        
-        // Convert Google Drive links
-        if (user.profileImage) {
-          user.profileImage = convertGoogleDriveLink(user.profileImage);
-        }
-        if (user.degreeCertificate) {
-          user.degreeCertificate = convertGoogleDriveLink(user.degreeCertificate);
+          user.password = await bcrypt.hash(user.password, 10);
         }
       },
       beforeUpdate: async (user) => {
         if (user.changed('password')) {
-          const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
+          user.password = await bcrypt.hash(user.password, 10);
         }
-        
-        // Convert Google Drive links
-        if (user.changed('profileImage') && user.profileImage) {
-          user.profileImage = convertGoogleDriveLink(user.profileImage);
-        }
-        if (user.changed('degreeCertificate') && user.degreeCertificate) {
-          user.degreeCertificate = convertGoogleDriveLink(user.degreeCertificate);
-        }
-      },
+      }
     },
+    indexes: [
+      {
+        unique: true,
+        fields: ['email']
+      },
+      {
+        fields: ['userType']
+      },
+      {
+        fields: ['isActive']
+      }
+    ]
   });
-
-  // Convert Google Drive sharing link to direct viewable link
-  function convertGoogleDriveLink(url) {
-    if (!url) return null;
-    
-    // Check if it's already a direct link
-    if (url.includes('drive.google.com/uc?id=')) {
-      return url;
-    }
-    
-    // Extract file ID from sharing URL
-    const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
-    if (fileIdMatch) {
-      const fileId = fileIdMatch[1];
-      return `https://drive.google.com/uc?id=${fileId}&export=view`;
-    }
-    
-    // If it's already a direct link or different format, return as is
-    return url;
-  }
-
-  User.prototype.comparePassword = async function(candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
-  };
 
   return User;
 };

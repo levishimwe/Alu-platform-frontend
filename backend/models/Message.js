@@ -1,37 +1,37 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const Message = sequelize.define('Message', {
+  class Message extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+
+  Message.init({
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true
-    },
-    conversationId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Conversations',
-        key: 'id'
-      }
-    },
-    senderId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+      primaryKey: true,
+      autoIncrement: true
     },
     content: {
       type: DataTypes.TEXT,
       allowNull: false
     },
-    read: {
+    senderId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    receiverId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    isRead: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
     }
   }, {
+    sequelize,
+    modelName: 'Message',
     tableName: 'Messages',
     timestamps: true
   });
