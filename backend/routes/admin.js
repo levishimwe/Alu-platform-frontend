@@ -4,227 +4,220 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 // Admin middleware
-const adminAuth = (req, res, next) => {
-  if (req.user.userType !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+const adminAuth = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.user.userId);
+    if (!user || user.userType !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    next();
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
   }
-  next();
 };
 
-// Get admin dashboard data
-router.get('/dashboard', auth, adminAuth, async (req, res) => {
-  try {
-    const totalUsers = await User.count();
-    const totalProjects = await Project.count();
-    const pendingProjects = await Project.count({ where: { status: 'pending' } });
-    const approvedProjects = await Project.count({ where: { status: 'approved' } });
-
-    const recentUsers = await User.findAll({
-      limit: 5,
-      order: [['createdAt', 'DESC']],
-      attributes: { exclude: ['password'] }
-    });
-
-    const recentProjects = await Project.findAll({
-      limit: 5,
-      order: [['createdAt', 'DESC']],
-      include: [{
-        model: User,
-        as: 'user',
-        attributes: ['firstName', 'lastName']
-      }]
-    });
-
-    res.json({
-      stats: {
-        totalUsers,
-        totalProjects,
-        pendingProjects,
-        approvedProjects
-      },
-      recentUsers,
-      recentProjects
-    });
-  } catch (error) {
-    console.error('Admin dashboard error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get all users with filters
+// Get all users
 router.get('/users', auth, adminAuth, async (req, res) => {
   try {
-    const { userType, isActive, page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 10, userType, isActive } = req.query;
     
-    const where = {};
-    if (userType) where.userType = userType;
-    if (isActive !== undefined) where.isActive = isActive === 'true';
-    
-    const offset = (page - 1) * limit;
+    const whereClause = {};
+    if (userType && userType !== 'all') whereClause.userType = userType;
+    if (isActive !== undefined) whereClause.isActive = isActive === 'true';
 
     const users = await User.findAndCountAll({
-      where,
+      where: whereClause,
       attributes: { exclude: ['password'] },
       limit: parseInt(limit),
-      offset: parseInt(offset),
+      offset: (parseInt(page) - 1) * parseInt(limit),
       order: [['createdAt', 'DESC']]
     });
 
     res.json({
+      message: 'Users retrieved successfully',
       users: users.rows,
-      totalUsers: users.count,
-      totalPages: Math.ceil(users.count / limit),
-      currentPage: parseInt(page)
+      pagination: {
+        total: users.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(users.count / parseInt(limit))
+      }
     });
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Failed to retrieve users' });
+  }
+});
+
+// Get all projects - with correct association
+router.get('/projects', auth, adminAuth, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+    
+    const whereClause = {};
+    if (status && status !== 'all') whereClause.status = status;
+
+    const projects = await Project.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'graduate', // ✅ This matches your index.js association
+          attributes: ['id', 'firstName', 'lastName', 'email', 'userType']
+        }
+      ],
+      limit: parseInt(limit),
+      offset: (parseInt(page) - 1) * parseInt(limit),
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json({
+      message: 'Projects retrieved successfully',
+      projects: projects.rows,
+      pagination: {
+        total: projects.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(projects.count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get projects error:', error);
+    res.status(500).json({ error: 'Failed to retrieve projects' });
   }
 });
 
 // Update user status
 router.put('/users/:id/status', auth, adminAuth, async (req, res) => {
   try {
-    const { status } = req.body; // isActive, isVerified, etc.
-    
-    const user = await User.findByPk(req.params.id);
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const user = await User.findByPk(id);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    await user.update(status);
-
-    res.json({ message: 'User status updated successfully', user });
-  } catch (error) {
-    console.error('Update user status error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get pending projects
-router.get('/projects/pending', auth, adminAuth, async (req, res) => {
-  try {
-    const projects = await Project.findAll({
-      where: { status: 'pending' },
-      include: [{
-        model: User,
-        as: 'user',
-        attributes: ['firstName', 'lastName', 'email']
-      }],
-      order: [['createdAt', 'ASC']]
-    });
-
-    res.json(projects);
-  } catch (error) {
-    console.error('Get pending projects error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Approve/reject project
-router.put('/projects/:id/approve', auth, adminAuth, async (req, res) => {
-  try {
-    const { approved, reason } = req.body;
-    
-    const project = await Project.findByPk(req.params.id);
-    if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-
-    const newStatus = approved ? 'approved' : 'rejected';
-    await project.update({ status: newStatus });
-
-    res.json({ 
-      message: `Project ${newStatus} successfully`, 
-      project,
-      reason 
-    });
-  } catch (error) {
-    console.error('Approve project error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get analytics
-router.get('/analytics', auth, adminAuth, async (req, res) => {
-  try {
-    // Basic analytics - you can expand this
-    const usersByType = await User.findAll({
-      attributes: [
-        'userType',
-        [sequelize.fn('COUNT', sequelize.col('userType')), 'count']
-      ],
-      group: ['userType']
-    });
-
-    const projectsByCategory = await Project.findAll({
-      attributes: [
-        'category',
-        [sequelize.fn('COUNT', sequelize.col('category')), 'count']
-      ],
-      group: ['category']
-    });
-
-    const projectsByStatus = await Project.findAll({
-      attributes: [
-        'status',
-        [sequelize.fn('COUNT', sequelize.col('status')), 'count']
-      ],
-      group: ['status']
-    });
+    await user.update({ isActive });
 
     res.json({
-      usersByType,
-      projectsByCategory,
-      projectsByStatus
+      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive: user.isActive
+      }
     });
   } catch (error) {
-    console.error('Get analytics error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Update user status error:', error);
+    res.status(500).json({ error: 'Failed to update user status' });
   }
 });
 
-// Generate reports
-router.get('/reports', auth, adminAuth, async (req, res) => {
+// Update project status
+router.put('/projects/:id/status', auth, adminAuth, async (req, res) => {
   try {
-    const { type, startDate, endDate } = req.query;
-    
-    let whereClause = {};
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
-      };
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const project = await Project.findByPk(id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
     }
 
-    let data = {};
-    
-    switch (type) {
-      case 'users':
-        data = await User.findAll({
-          where: whereClause,
-          attributes: { exclude: ['password'] },
-          order: [['createdAt', 'DESC']]
-        });
-        break;
-      case 'projects':
-        data = await Project.findAll({
-          where: whereClause,
-          include: [{
-            model: User,
-            as: 'user',
-            attributes: ['firstName', 'lastName', 'email']
-          }],
-          order: [['createdAt', 'DESC']]
-        });
-        break;
-      default:
-        return res.status(400).json({ message: 'Invalid report type' });
-    }
+    await project.update({ status });
 
-    res.json({ type, data, generatedAt: new Date() });
+    res.json({
+      message: 'Project status updated successfully',
+      project: {
+        id: project.id,
+        title: project.title,
+        status: project.status
+      }
+    });
   } catch (error) {
-    console.error('Generate report error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Update project status error:', error);
+    res.status(500).json({ error: 'Failed to update project status' });
+  }
+});
+
+// Delete user (soft delete)
+router.delete('/users/:id', auth, adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent admin from deleting themselves
+    if (user.id === req.user.userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    await user.update({ isActive: false });
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Delete project
+router.delete('/projects/:id', auth, adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const project = await Project.findByPk(id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    await project.destroy();
+
+    res.json({ message: 'Project deleted successfully' });
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// Get platform statistics
+router.get('/stats', auth, adminAuth, async (req, res) => {
+  try {
+    const totalUsers = await User.count();
+    const activeUsers = await User.count({ where: { isActive: true } });
+    const graduates = await User.count({ where: { userType: 'graduate' } });
+    const investors = await User.count({ where: { userType: 'investor' } });
+    
+    const totalProjects = await Project.count();
+    const activeProjects = await Project.count({ where: { status: 'active' } });
+    const pendingProjects = await Project.count({ where: { status: 'pending' } });
+
+    res.json({
+      message: 'Statistics retrieved successfully',
+      stats: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          graduates,
+          investors
+        },
+        projects: {
+          total: totalProjects,
+          active: activeProjects,
+          pending: pendingProjects
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({ error: 'Failed to retrieve statistics' });
   }
 });
 

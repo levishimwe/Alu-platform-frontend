@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Menu, X, User, MessageSquare } from 'lucide-react';
+import { Search, Menu, X, User, MessageSquare, Phone, Settings } from 'lucide-react';
 
 const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -38,7 +38,7 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
     } else if (user?.userType === 'investor') {
       setCurrentPage('investor-portal');
     } else if (user?.userType === 'admin') {
-      setCurrentPage('admin-panel');
+      setCurrentPage('admin-dashboard'); // ✅ Changed from admin-panel to admin-dashboard
     }
     setShowUserMenu(false);
   };
@@ -101,7 +101,31 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
                 INVESTORS
               </button>
 
-              {/* ✅ NEW: Messages button - only show for authenticated users */}
+              {/* ✅ NEW: Contact Us button - available for everyone */}
+              <button 
+                onClick={() => setCurrentPage('contact')}
+                className={`flex items-center space-x-1 hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                  currentPage === 'contact' ? 'text-blue-200' : ''
+                }`}
+              >
+                <Phone size={16} />
+                <span>CONTACT US</span>
+              </button>
+
+              {/* ✅ NEW: Admin Dashboard button - only show for admin users */}
+              {user?.userType === 'admin' && (
+                <button 
+                  onClick={() => setCurrentPage('admin-dashboard')}
+                  className={`flex items-center space-x-1 hover:text-blue-200 font-medium px-3 py-2 text-sm uppercase tracking-wide ${
+                    currentPage === 'admin-dashboard' ? 'text-blue-200' : ''
+                  }`}
+                >
+                  <Settings size={16} />
+                  <span>ADMIN</span>
+                </button>
+              )}
+
+              {/* Messages button - only show for authenticated users */}
               {user && (
                 <button 
                   onClick={() => setCurrentPage('messages')}
@@ -147,7 +171,7 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
                             My Profile
                           </button>
                           
-                          {/* ✅ NEW: Messages link in dropdown */}
+                          
                           <button
                             onClick={() => {
                               setCurrentPage('messages');
@@ -164,6 +188,19 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
                           >
                             Dashboard
                           </button>
+
+                          {/* ✅ NEW: Admin Dashboard in dropdown - only for admin */}
+                          {user?.userType === 'admin' && (
+                            <button
+                              onClick={() => {
+                                setCurrentPage('admin-dashboard');
+                                setShowUserMenu(false);
+                              }}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Admin Dashboard
+                            </button>
+                          )}
                           
                           <hr className="my-1" />
                           
@@ -251,7 +288,37 @@ const Navigation = ({ currentPage, setCurrentPage, setAuthModal }) => {
               INVESTORS
             </button>
 
-            {/* ✅ NEW: Messages button for mobile - only show for authenticated users */}
+            {/* ✅ NEW: Contact Us button for mobile */}
+            <button
+              onClick={() => {
+                setCurrentPage('contact');
+                setIsMenuOpen(false);
+              }}
+              className={`flex items-center space-x-2 w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                currentPage === 'contact' ? 'bg-blue-700' : ''
+              }`}
+            >
+              <Phone size={16} />
+              <span>CONTACT US</span>
+            </button>
+
+            {/* ✅ NEW: Admin Dashboard button for mobile - only show for admin users */}
+            {user?.userType === 'admin' && (
+              <button
+                onClick={() => {
+                  setCurrentPage('admin-dashboard');
+                  setIsMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2 w-full text-left px-3 py-2 text-sm font-medium hover:bg-blue-700 rounded ${
+                  currentPage === 'admin-dashboard' ? 'bg-blue-700' : ''
+                }`}
+              >
+                <Settings size={16} />
+                <span>ADMIN DASHBOARD</span>
+              </button>
+            )}
+
+            {/* Messages button for mobile - only show for authenticated users */}
             {user && (
               <button
                 onClick={() => {

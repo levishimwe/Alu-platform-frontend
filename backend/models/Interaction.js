@@ -1,44 +1,40 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const { DataTypes, Model } = require('sequelize');
 
-const Interaction = sequelize.define('Interaction', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  investorId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'Users', // This should match your User table name
-      key: 'id',
-    },
-  },
-  projectId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'Projects', // This should match your Project table name
-      key: 'id',
-    },
-  },
-  type: {
-    type: DataTypes.ENUM('bookmark', 'interest', 'contact'),
-    allowNull: false,
-  },
-  message: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
-  status: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: 'active',
-  },
-}, {
-  timestamps: true, // This adds createdAt and updatedAt automatically
-  tableName: 'Interactions', // Explicit table name
-});
+module.exports = (sequelize) => {
+  class Interaction extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
 
-module.exports = Interaction;
+  Interaction.init({
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    type: {
+      type: DataTypes.ENUM('like', 'view', 'contact', 'favorite'),
+      allowNull: false
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    targetId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    targetType: {
+      type: DataTypes.ENUM('project', 'user'),
+      allowNull: false
+    }
+  }, {
+    sequelize,
+    modelName: 'Interaction',
+    tableName: 'Interactions',
+    timestamps: true
+  });
+
+  return Interaction;
+};

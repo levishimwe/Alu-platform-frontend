@@ -1,82 +1,49 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Model } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const GraduateProfile = sequelize.define('GraduateProfile', {
+  class GraduateProfile extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+
+  GraduateProfile.init({
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
+      autoIncrement: true
     },
     userId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      unique: true,
+      allowNull: true, // ✅ Changed from false to true to allow SET NULL
       references: {
         model: 'Users',
         key: 'id'
       }
     },
-    firstName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    lastName: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    location: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    bio: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    university: {  // Add this field if it doesn't exist
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    graduationYear: {
-      type: DataTypes.INTEGER,
-      allowNull: true
-    },
-    major: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     skills: {
-      type: DataTypes.TEXT,
+      type: DataTypes.JSON,
       allowNull: true
     },
-    linkedinUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    githubUrl: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    portfolioUrl: {
-      type: DataTypes.STRING,
+    projects: {
+      type: DataTypes.JSON,
       allowNull: true
     },
     experience: {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    achievements: {
-      type: DataTypes.TEXT,
+    portfolio: {
+      type: DataTypes.STRING(500),
       allowNull: true
+    },
+    availability: {
+      type: DataTypes.ENUM('available', 'busy', 'not_available'),
+      defaultValue: 'available'
     }
   }, {
+    sequelize,
+    modelName: 'GraduateProfile',
     tableName: 'GraduateProfiles',
     timestamps: true
   });

@@ -15,6 +15,7 @@ const projectRoutes = require('./routes/projects');
 const profileRoutes = require('./routes/profiles');
 const messageRoutes = require('./routes/messages'); // Add this
 const userRoutes = require('./routes/users'); // Add this
+const adminRoutes = require('./routes/admin');
 const models = require('./models');
 
 const app = express();
@@ -65,7 +66,11 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://172.26.10.146:3000', // Add your IP address
+    'http://0.0.0.0:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -97,6 +102,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/messages', messageRoutes); // Add this
 app.use('/api/users', userRoutes); // Add this
+app.use('/api/admin', adminRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
