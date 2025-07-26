@@ -15,103 +15,21 @@ const validateYouTubeLink = (url) => {
   return youtubeRegex.test(url);
 };
 
-// Create a new project with URL validation
+// CREATE PROJECT
 router.post('/', auth, [
   body('title')
     .trim()
-    .isLength({ min: 3, max: 100 })
-    .withMessage('Title must be between 3 and 100 characters'),
+    .isLength({ min: 3, max: 255 })
+    .withMessage('Title must be between 3 and 255 characters'),
   
   body('description')
     .trim()
-    .isLength({ min: 10, max: 2000 })
-    .withMessage('Description must be between 10 and 2000 characters'),
-  
-  body('category')
-    .notEmpty()
-    .withMessage('Category is required'),
-  
-  body('impactArea')
-    .optional()
-    .trim(),
-  
-  // Validate image URLs (Google Drive only)
-  body('imageUrls')
-    .optional()
-    .custom((value) => {
-      if (!value) return true;
-      
-      let urls;
-      try {
-        urls = Array.isArray(value) ? value : JSON.parse(value);
-      } catch (e) {
-        throw new Error('Invalid image URLs format');
-      }
-      
-      if (!Array.isArray(urls)) {
-        throw new Error('Image URLs must be an array');
-      }
-      
-      for (const url of urls) {
-        if (url && !validateGoogleDriveLink(url)) {
-          throw new Error(`Image URL must be a Google Drive link: ${url}`);
-        }
-      }
-      return true;
-    }),
-  
-  // Validate video URLs (YouTube only)
-  body('videoUrls')
-    .optional()
-    .custom((value) => {
-      if (!value) return true;
-      
-      let urls;
-      try {
-        urls = Array.isArray(value) ? value : JSON.parse(value);
-      } catch (e) {
-        throw new Error('Invalid video URLs format');
-      }
-      
-      if (!Array.isArray(urls)) {
-        throw new Error('Video URLs must be an array');
-      }
-      
-      for (const url of urls) {
-        if (url && !validateYouTubeLink(url)) {
-          throw new Error(`Video URL must be a YouTube link: ${url}`);
-        }
-      }
-      return true;
-    }),
-  
-  // Validate document URLs (Google Drive only)
-  body('documentUrls')
-    .optional()
-    .custom((value) => {
-      if (!value) return true;
-      
-      let urls;
-      try {
-        urls = Array.isArray(value) ? value : JSON.parse(value);
-      } catch (e) {
-        throw new Error('Invalid document URLs format');
-      }
-      
-      if (!Array.isArray(urls)) {
-        throw new Error('Document URLs must be an array');
-      }
-      
-      for (const url of urls) {
-        if (url && !validateGoogleDriveLink(url)) {
-          throw new Error(`Document URL must be a Google Drive link: ${url}`);
-        }
-      }
-      return true;
-    }),
+    .isLength({ min: 10 })
+    .withMessage('Description must be at least 10 characters'),
 ], async (req, res) => {
   try {
-    // Check for validation errors
+    console.log('📝 Raw request body:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('❌ Project validation errors:', errors.array());
@@ -121,79 +39,144 @@ router.post('/', auth, [
       });
     }
 
-    const { title, description, category, impactArea, imageUrls, videoUrls, documentUrls } = req.body;
-    const userId = req.user.userId;
+    const { 
+      title, 
+      description, 
+      category,
+      impactArea,
+      technologies, 
+      fundingGoal, 
+      demoUrl, 
+      repoUrl,
+      imageUrls,
+      videoUrls,
+      documentUrls
+    } = req.body;
+    
+    const graduateId = req.user.id;
 
-    console.log('Creating project:', { title, description, category, impactArea });
-    console.log('URLs received:', { imageUrls, videoUrls, documentUrls });
+    console.log('🔍 Extracted fields:', { 
+      title, description, category, impactArea, graduateId,
+      technologies, fundingGoal, demoUrl, repoUrl 
+    });
+    console.log('📎 URLs received:', { imageUrls, videoUrls, documentUrls });
 
-    // Process and validate URLs
+    // Process URLs - handle both string and array formats
     let images = [];
     let videos = [];
     let documents = [];
 
-    // Process image URLs (Google Drive only)
-    if (imageUrls) {
-      try {
-        const parsedImageUrls = Array.isArray(imageUrls) ? imageUrls : JSON.parse(imageUrls);
-        images = parsedImageUrls.filter(url => url && url.trim() !== '' && validateGoogleDriveLink(url));
-      } catch (e) {
-        console.error('Error parsing image URLs:', e);
+    try {
+      // Handle imageUrls
+      if (imageUrls) {
+        if (typeof imageUrls === 'string') {
+          images = JSON.parse(imageUrls).filter(url => url?.trim());
+        } else if (Array.isArray(imageUrls)) {
+          images = imageUrls.filter(url => url?.trim());
+        }
       }
+
+      // Handle videoUrls
+      if (videoUrls) {
+        if (typeof videoUrls === 'string') {
+          videos = JSON.parse(videoUrls).filter(url => url?.trim());
+        } else if (Array.isArray(videoUrls)) {
+          videos = videoUrls.filter(url => url?.trim());
+        }
+      }
+
+      // Handle documentUrls
+      if (documentUrls) {
+        if (typeof documentUrls === 'string') {
+          documents = JSON.parse(documentUrls).filter(url => url?.trim());
+        } else if (Array.isArray(documentUrls)) {
+          documents = documentUrls.filter(url => url?.trim());
+        }
+      }
+    } catch (parseError) {
+      console.error('❌ Error parsing URLs:', parseError);
+      return res.status(400).json({
+        error: 'Invalid URL format',
+        message: 'Please provide valid URL arrays'
+      });
     }
 
-    // Process video URLs (YouTube only)
-    if (videoUrls) {
-      try {
-        const parsedVideoUrls = Array.isArray(videoUrls) ? videoUrls : JSON.parse(videoUrls);
-        videos = parsedVideoUrls.filter(url => url && url.trim() !== '' && validateYouTubeLink(url));
-      } catch (e) {
-        console.error('Error parsing video URLs:', e);
-      }
+    console.log('✅ Processed URLs:', { images, videos, documents });
+
+    // Validate required fields
+    if (!title || !description || !graduateId) {
+      console.log('❌ Missing required fields:', { title: !!title, description: !!description, graduateId: !!graduateId });
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Title, description, and graduateId are required'
+      });
     }
 
-    // Process document URLs (Google Drive only)
-    if (documentUrls) {
-      try {
-        const parsedDocumentUrls = Array.isArray(documentUrls) ? documentUrls : JSON.parse(documentUrls);
-        documents = parsedDocumentUrls.filter(url => url && url.trim() !== '' && validateGoogleDriveLink(url));
-      } catch (e) {
-        console.error('Error parsing document URLs:', e);
+    // Prepare replacement values
+    const replacementValues = [
+      title,
+      description,
+      graduateId,
+      category || null,
+      impactArea || null,
+      JSON.stringify(technologies || []),
+      JSON.stringify(images),
+      JSON.stringify(videos),
+      JSON.stringify(documents),
+      'active',
+      fundingGoal ? parseFloat(fundingGoal) : null,
+      0.00,
+      demoUrl || null,
+      repoUrl || null,
+      false
+    ];
+
+    console.log('📊 Replacement values count:', replacementValues.length);
+    console.log('📊 Replacement values:', replacementValues);
+
+    // Create project using raw query
+    const insertQuery = `
+      INSERT INTO Projects (
+        title, description, graduateId, category, impactArea,
+        technologies, images, videos, documents, status, 
+        fundingGoal, currentFunding, demoUrl, repoUrl, featured,
+        createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+
+    console.log('🗃️  Executing insert query...');
+    
+    const result = await sequelize.query(insertQuery, {
+      replacements: replacementValues,
+      type: sequelize.QueryTypes.INSERT
+    });
+
+    const projectId = result[0];
+    console.log('✅ Project created with ID:', projectId);
+
+    // Get the created project with ALL fields
+    const createdProject = await sequelize.query(
+      `SELECT id, graduateId, title, description, category, impactArea,
+              technologies, images, videos, documents, status, 
+              fundingGoal, currentFunding, demoUrl, repoUrl, featured,
+              createdAt, updatedAt 
+       FROM Projects WHERE id = ?`,
+      {
+        replacements: [projectId],
+        type: sequelize.QueryTypes.SELECT
       }
-    }
+    );
 
-    console.log('Processed and validated URLs:', { images, videos, documents });
-
-// Create project data matching the updated model
-const projectData = {
-  title,
-  description,
-  category,
-  impactArea,
-  images: images, // Will be converted to JSON string by model
-  videos: videos, // Will be converted to JSON string by model  
-  documents: documents, // Will be converted to JSON string by model
-  graduateId: userId,
-  status: 'published' // Valid values: 'draft', 'published', 'under_review'
-};
-
-console.log('Project data to save:', projectData);
-
-// Create project
-const project = await Project.create(projectData);
+    console.log('🎉 Project created successfully:', createdProject[0]);
 
     res.status(201).json({
       message: 'Project created successfully',
-      project: {
-        ...project.toJSON(),
-        images: images,
-        videos: videos,
-        documents: documents
-      }
+      project: createdProject[0]
     });
 
   } catch (error) {
     console.error('💥 Project creation error:', error);
+    console.error('💥 Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Failed to create project',
       message: error.message 
@@ -201,21 +184,17 @@ const project = await Project.create(projectData);
   }
 });
 
-// Get all projects (existing code - no changes needed)
+// GET ALL PROJECTS (Fixed)
 router.get('/', async (req, res) => {
   try {
     console.log('Fetching projects with query params:', req.query);
     
-    const { category, search, graduateId } = req.query;
+    const { search, graduateId } = req.query;
     
-    let whereConditions = [`status = 'published'`];
+    let whereConditions = [`status IN ('active', 'completed')`];
     let queryParams = [];
-    
-    if (category) {
-      whereConditions.push('category = ?');
-      queryParams.push(category);
-    }
-    
+
+  
     if (graduateId) {
       whereConditions.push('graduateId = ?');
       queryParams.push(graduateId);
@@ -229,12 +208,13 @@ router.get('/', async (req, res) => {
     const whereClause = whereConditions.join(' AND ');
     
     const query = `
-      SELECT id, graduateId, title, description, category, impactArea, 
-             images, videos, documents, views, likes, status, 
+      SELECT id, graduateId, title, description, category, impactArea,
+             technologies, images, videos, documents, status, 
+             fundingGoal, currentFunding, demoUrl, repoUrl, featured,
              createdAt, updatedAt 
       FROM Projects 
-      WHERE ${whereClause} 
-      ORDER BY createdAt DESC
+      WHERE ${whereClause}
+      ORDER BY featured DESC, createdAt DESC
     `;
     
     console.log('Executing query:', query);
@@ -248,60 +228,29 @@ router.get('/', async (req, res) => {
     console.log(`Found ${projects.length} projects`);
 
     // Parse JSON fields for response
-    const projectsWithParsedMedia = projects.map(project => {
+    const projectsWithParsedData = projects.map(project => {
       try {
         const parsedProject = { ...project };
         
-        // Parse and validate images (Google Drive)
-        if (project.images && typeof project.images === 'string') {
-          try {
-            const parsedImages = JSON.parse(project.images);
-            parsedProject.images = Array.isArray(parsedImages) 
-              ? parsedImages.filter(img => img && validateGoogleDriveLink(img))
-              : [];
-          } catch (e) {
-
-            parsedProject.images = [];
+        // Parse all JSON fields
+        ['technologies', 'images', 'videos', 'documents'].forEach(field => {
+          if (project[field] && typeof project[field] === 'string') {
+            try {
+              parsedProject[field] = JSON.parse(project[field]);
+            } catch (e) {
+              parsedProject[field] = [];
+            }
+          } else if (!project[field]) {
+            parsedProject[field] = [];
           }
-        } else {
-          parsedProject.images = [];
-        }
-        
-        // Parse and validate videos (YouTube)
-        if (project.videos && typeof project.videos === 'string') {
-          try {
-            const parsedVideos = JSON.parse(project.videos);
-            parsedProject.videos = Array.isArray(parsedVideos) 
-              ? parsedVideos.filter(video => video && validateYouTubeLink(video))
-              : [];
-          } catch (e) {
-
-            parsedProject.videos = [];
-          }
-        } else {
-          parsedProject.videos = [];
-        }
-        
-        // Parse and validate documents (Google Drive)
-        if (project.documents && typeof project.documents === 'string') {
-          try {
-            const parsedDocuments = JSON.parse(project.documents);
-            parsedProject.documents = Array.isArray(parsedDocuments) 
-              ? parsedDocuments.filter(doc => doc && validateGoogleDriveLink(doc))
-              : [];
-          } catch (e) {
-
-            parsedProject.documents = [];
-          }
-        } else {
-          parsedProject.documents = [];
-        }
+        });
         
         return parsedProject;
       } catch (e) {
         console.error('Error processing project', project.id, ':', e);
         return {
           ...project,
+          technologies: [],
           images: [],
           videos: [],
           documents: []
@@ -311,8 +260,8 @@ router.get('/', async (req, res) => {
     });
 
     res.json({
-      projects: projectsWithParsedMedia,
-      total: projectsWithParsedMedia.length
+      projects: projectsWithParsedData,
+      total: projectsWithParsedData.length
     });
   } catch (error) {
     console.error('Get projects error:', error);
@@ -323,12 +272,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single project - Use raw query
+// GET SINGLE PROJECT (Fixed)
 router.get('/:id', async (req, res) => {
   try {
     const query = `
-      SELECT id, graduateId, title, description, category, impactArea, 
-             images, videos, documents, views, likes, status, 
+      SELECT id, graduateId, title, description, category, impactArea,
+             technologies, images, videos, documents, status, 
+             fundingGoal, currentFunding, demoUrl, repoUrl, featured,
              createdAt, updatedAt 
       FROM Projects 
       WHERE id = ?
@@ -345,61 +295,23 @@ router.get('/:id', async (req, res) => {
 
     const project = projects[0];
 
-    // Increment views
-    await sequelize.query('UPDATE Projects SET views = views + 1 WHERE id = ?', {
-      replacements: [req.params.id],
-      type: sequelize.QueryTypes.UPDATE
-    });
 
-    // Parse JSON fields with better error handling and filter invalid URLs
+
+
     const projectData = { ...project };
     
-    // Parse images and filter out invalid ones
-    if (project.images && typeof project.images === 'string') {
-      try {
-        const parsedImages = JSON.parse(project.images);
-        projectData.images = Array.isArray(parsedImages) 
-          ? parsedImages.filter(img => img && !img.includes('undefined') && img.trim() !== '')
-          : [];
-      } catch (e) {
-        console.error('Error parsing images:', project.images);
-        projectData.images = [];
+    // Parse all JSON fields
+    ['technologies', 'images', 'videos', 'documents'].forEach(field => {
+      if (project[field] && typeof project[field] === 'string') {
+        try {
+          projectData[field] = JSON.parse(project[field]);
+        } catch (e) {
+          projectData[field] = [];
+        }
+      } else if (!project[field]) {
+        projectData[field] = [];
       }
-    } else {
-      projectData.images = [];
-    }
-    
-    // Parse videos and filter out invalid ones
-    if (project.videos && typeof project.videos === 'string') {
-      try {
-        const parsedVideos = JSON.parse(project.videos);
-        projectData.videos = Array.isArray(parsedVideos) 
-          ? parsedVideos.filter(video => video && !video.includes('undefined') && video.trim() !== '')
-          : [];
-      } catch (e) {
-        console.error('Error parsing videos:', project.videos);
-        projectData.videos = [];
-      }
-    } else {
-      projectData.videos = [];
-    }
-    
-    // Parse documents and filter out invalid ones
-    if (project.documents && typeof project.documents === 'string') {
-      try {
-        const parsedDocuments = JSON.parse(project.documents);
-        projectData.documents = Array.isArray(parsedDocuments) 
-          ? parsedDocuments.filter(doc => doc && !doc.includes('undefined') && doc.trim() !== '')
-          : [];
-      } catch (e) {
-        console.error('Error parsing documents:', project.documents);
-        projectData.documents = [];
-      }
-    } else {
-      projectData.documents = [];
-    }
-
-    projectData.views = project.views + 1; // Update the view count in response
+    });
 
     res.json({ project: projectData });
   } catch (error) {
@@ -411,14 +323,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update project - Use raw query
+// UPDATE PROJECT (Fixed)
 router.put('/:id', auth, async (req, res) => {
   try {
-    // First check if project exists and user owns it
-    const checkQuery = `
-      SELECT id, graduateId FROM Projects WHERE id = ?
-    `;
-    
+    const checkQuery = `SELECT id, graduateId FROM Projects WHERE id = ?`;
     const projects = await sequelize.query(checkQuery, {
       replacements: [req.params.id],
       type: sequelize.QueryTypes.SELECT
@@ -430,24 +338,37 @@ router.put('/:id', auth, async (req, res) => {
 
     const project = projects[0];
 
-    // Check if user owns the project
+
     if (project.graduateId !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized to update this project' });
     }
 
-    // Update the project
+
     const updateFields = [];
     const updateValues = [];
     
+    // Include ALL updatable fields
+    const allowedFields = [
+      'title', 'description', 'category', 'impactArea', 'technologies', 
+      'images', 'videos', 'documents', 'status', 'fundingGoal', 
+      'demoUrl', 'repoUrl', 'featured'
+    ];
+    
     Object.keys(req.body).forEach(key => {
-      if (['title', 'description', 'category', 'impactArea', 'status'].includes(key)) {
+      if (allowedFields.includes(key)) {
         updateFields.push(`${key} = ?`);
-        updateValues.push(req.body[key]);
+        if (['technologies', 'images', 'videos', 'documents'].includes(key)) {
+          updateValues.push(JSON.stringify(req.body[key] || []));
+        } else if (key === 'fundingGoal') {
+          updateValues.push(req.body[key] ? parseFloat(req.body[key]) : null);
+        } else {
+          updateValues.push(req.body[key]);
+        }
       }
     });
     
     if (updateFields.length > 0) {
-      updateValues.push(req.params.id); // Add ID for WHERE clause
+      updateValues.push(req.params.id);
       
       const updateQuery = `
         UPDATE Projects 
@@ -461,10 +382,11 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
-    // Get updated project
+    // Get updated project with ALL fields
     const updatedProjects = await sequelize.query(`
-      SELECT id, graduateId, title, description, category, impactArea, 
-             images, videos, documents, views, likes, status, 
+      SELECT id, graduateId, title, description, category, impactArea,
+             technologies, images, videos, documents, status, 
+             fundingGoal, currentFunding, demoUrl, repoUrl, featured,
              createdAt, updatedAt 
       FROM Projects 
       WHERE id = ?
@@ -486,14 +408,10 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Delete project - Use raw query
+// DELETE PROJECT (unchanged)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    // First check if project exists and user owns it
-    const checkQuery = `
-      SELECT id, graduateId FROM Projects WHERE id = ?
-    `;
-    
+    const checkQuery = `SELECT id, graduateId FROM Projects WHERE id = ?`;
     const projects = await sequelize.query(checkQuery, {
       replacements: [req.params.id],
       type: sequelize.QueryTypes.SELECT
@@ -505,12 +423,12 @@ router.delete('/:id', auth, async (req, res) => {
 
     const project = projects[0];
 
-    // Check if user owns the project
+
     if (project.graduateId !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized to delete this project' });
     }
 
-    // Delete the project
+
     await sequelize.query('DELETE FROM Projects WHERE id = ?', {
       replacements: [req.params.id],
       type: sequelize.QueryTypes.DELETE

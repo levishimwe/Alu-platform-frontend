@@ -76,93 +76,93 @@ const ProjectUploadModal = ({ isOpen, onClose, onSuccess }) => {
     return youtubeRegex.test(url);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrors({});
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setErrors({});
 
-    // Basic validation
-    if (!formData.title || !formData.description) {
-      setErrors({ general: 'Title and description are required' });
-      setLoading(false);
-      return;
+  // Basic validation
+  if (!formData.title || !formData.description) {
+    setErrors({ general: 'Title and description are required' });
+    setLoading(false);
+    return;
+  }
+
+  // URL validation
+  const validationErrors = {};
+
+  const validImageUrls = imageUrls.filter(url => url.trim());
+  for (const url of validImageUrls) {
+    if (!validateGoogleDriveUrl(url)) {
+      validationErrors.images = 'All image URLs must be Google Drive links';
+      break;
+    }
+  }
+
+  const validVideoUrls = videoUrls.filter(url => url.trim());
+  for (const url of validVideoUrls) {
+    if (!validateYouTubeUrl(url)) {
+      validationErrors.videos = 'All video URLs must be YouTube links';
+      break;
+    }
+  }
+
+  const validDocumentUrls = documentUrls.filter(url => url.trim());
+  for (const url of validDocumentUrls) {
+    if (!validateGoogleDriveUrl(url)) {
+      validationErrors.documents = 'All document URLs must be Google Drive links';
+      break;
+    }
+  }
+
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    setLoading(false);
+    return;
+  }
+
+  try {
+    // ✅ Send data with correct field names that match your backend
+    const projectData = {
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      impactArea: formData.impactArea,
+      imageUrls: validImageUrls,  // Backend expects imageUrls
+      videoUrls: validVideoUrls,  // Backend expects videoUrls  
+      documentUrls: validDocumentUrls,  // Backend expects documentUrls
+    };
+
+    console.log('🚀 Submitting project data:', projectData);
+
+    const response = await projectAPI.createProject(projectData);
+
+    // Reset form
+    setFormData({
+      title: '',
+      description: '',
+      category: '',
+      impactArea: ''
+    });
+    setImageUrls(['']);
+    setVideoUrls(['']);
+    setDocumentUrls(['']);
+
+    if (onSuccess && typeof onSuccess === 'function') {
+      onSuccess(response.data.project);
     }
 
-    // URL validation
-    const validationErrors = {};
+    onClose();
 
-    // Validate image URLs (Google Drive only)
-    const validImageUrls = imageUrls.filter(url => url.trim());
-    for (const url of validImageUrls) {
-      if (!validateGoogleDriveUrl(url)) {
-        validationErrors.images = 'All image URLs must be Google Drive links';
-        break;
-      }
-    }
-
-    // Validate video URLs (YouTube only)
-    const validVideoUrls = videoUrls.filter(url => url.trim());
-    for (const url of validVideoUrls) {
-      if (!validateYouTubeUrl(url)) {
-        validationErrors.videos = 'All video URLs must be YouTube links';
-        break;
-      }
-    }
-
-    // Validate document URLs (Google Drive only)
-    const validDocumentUrls = documentUrls.filter(url => url.trim());
-    for (const url of validDocumentUrls) {
-      if (!validateGoogleDriveUrl(url)) {
-        validationErrors.documents = 'All document URLs must be Google Drive links';
-        break;
-      }
-    }
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Prepare project data
-      const projectData = {
-        ...formData,
-        imageUrls: validImageUrls,
-        videoUrls: validVideoUrls,
-        documentUrls: validDocumentUrls
-      };
-
-      console.log('🚀 Submitting project data:', projectData);
-
-      // Use the API service
-      const response = await projectAPI.createProject(projectData);
-
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        impactArea: ''
-      });
-      setImageUrls(['']);
-      setVideoUrls(['']);
-      setDocumentUrls(['']);
-
-      // Call success callback
-      if (onSuccess && typeof onSuccess === 'function') {
-        onSuccess(response.data.project);
-      }
-
-      onClose();
-
-    } catch (error) {
-      console.error('❌ Project creation error:', error);
-      setErrors({ general: error.message || 'Failed to create project' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error('❌ Project creation error:', error);
+    setErrors({ 
+      general: error.response?.data?.message || error.message || 'Failed to create project' 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const UrlSection = ({ title, type, urls, placeholder, validation, icon }) => (
     <div>

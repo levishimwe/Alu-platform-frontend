@@ -1,223 +1,205 @@
 const express = require('express');
-const { User, Project } = require('../models');
 const auth = require('../middleware/auth');
+const { User, Project } = require('../models');
+const { sequelize } = require('../config/database');
 const router = express.Router();
 
-// Admin middleware
-const adminAuth = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.user.userId);
-    if (!user || user.userType !== 'admin') {
-      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
-    }
-    next();
-  } catch (error) {
-    console.error('Admin auth error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+// Admin middleware to check if user is admin
+const adminAuth = (req, res, next) => {
+  console.log('🔍 Admin auth check - user:', req.user);
+  
+  if (!req.user) {
+    console.log('❌ No user in request');
+    return res.status(401).json({ message: 'Unauthorized' });
   }
+  
+  if (req.user.userType !== 'admin') {
+    console.log('❌ User is not admin:', req.user.userType);
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  
+  console.log('✅ Admin access granted');
+  next();
 };
 
-// Get all users
+// GET ALL USERS (Admin only)
 router.get('/users', auth, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, userType, isActive } = req.query;
+    console.log('📊 Admin fetching all users');
     
-    const whereClause = {};
-    if (userType && userType !== 'all') whereClause.userType = userType;
-    if (isActive !== undefined) whereClause.isActive = isActive === 'true';
-
-    const users = await User.findAndCountAll({
-      where: whereClause,
-      attributes: { exclude: ['password'] },
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      order: [['createdAt', 'DESC']]
+    const users = await sequelize.query(`
+      SELECT id, firstName, lastName, email, userType, 
+             profileImage, bio, skills, university, graduationYear,
+             companyName, companyWebsite, country, city, 
+             isActive, lastLogin, createdAt, updatedAt
+      FROM Users
+      ORDER BY createdAt DESC
+    `, {
+      type: sequelize.QueryTypes.SELECT
     });
 
     res.json({
-      message: 'Users retrieved successfully',
-      users: users.rows,
-      pagination: {
-        total: users.count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(users.count / parseInt(limit))
-      }
+      users,
+      total: users.length
     });
   } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({ error: 'Failed to retrieve users' });
+    console.error('❌ Admin get users error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch users',
+      message: error.message 
+    });
   }
 });
 
-// Get all projects - with correct association
+// GET ALL PROJECTS (Admin only)
 router.get('/projects', auth, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
+    console.log('📊 Admin fetching all projects');
     
-    const whereClause = {};
-    if (status && status !== 'all') whereClause.status = status;
+    const projects = await sequelize.query(`
+      SELECT p.id, p.graduateId, p.title, p.description, p.category, p.impactArea,
+             p.technologies, p.images, p.videos, p.documents, p.status, 
+             p.fundingGoal, p.currentFunding, p.demoUrl, p.repoUrl, p.featured,
+             p.createdAt, p.updatedAt,
+             u.firstName, u.lastName, u.email
+      FROM Projects p
+      LEFT JOIN Users u ON p.graduateId = u.id
+      ORDER BY p.createdAt DESC
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
 
-    const projects = await Project.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: User,
-          as: 'graduate', // ✅ This matches your index.js association
-          attributes: ['id', 'firstName', 'lastName', 'email', 'userType']
+    // Parse JSON fields
+    const processedProjects = projects.map(project => {
+      const processed = { ...project };
+      
+      ['technologies', 'images', 'videos', 'documents'].forEach(field => {
+        if (project[field] && typeof project[field] === 'string') {
+          try {
+            processed[field] = JSON.parse(project[field]);
+          } catch (e) {
+            processed[field] = [];
+          }
+        } else if (!project[field]) {
+          processed[field] = [];
         }
-      ],
-      limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      order: [['createdAt', 'DESC']]
+      });
+      
+      return processed;
     });
 
     res.json({
-      message: 'Projects retrieved successfully',
-      projects: projects.rows,
-      pagination: {
-        total: projects.count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(projects.count / parseInt(limit))
-      }
+      projects: processedProjects,
+      total: processedProjects.length
     });
   } catch (error) {
-    console.error('Get projects error:', error);
-    res.status(500).json({ error: 'Failed to retrieve projects' });
+    console.error('❌ Admin get projects error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch projects',
+      message: error.message 
+    });
   }
 });
 
-// Update user status
+// UPDATE USER STATUS (Admin only)
 router.put('/users/:id/status', auth, adminAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    
     const { isActive } = req.body;
-
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    await user.update({ isActive });
-
-    res.json({
-      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        isActive: user.isActive
-      }
+    
+    await sequelize.query(`
+      UPDATE Users 
+      SET isActive = ?, updatedAt = NOW() 
+      WHERE id = ?
+    `, {
+      replacements: [isActive, req.params.id],
+      type: sequelize.QueryTypes.UPDATE
     });
+
+    res.json({ message: 'User status updated successfully' });
   } catch (error) {
-    console.error('Update user status error:', error);
-    res.status(500).json({ error: 'Failed to update user status' });
+    console.error('❌ Admin update user status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to update user status',
+      message: error.message 
+    });
   }
 });
 
-// Update project status
+// UPDATE PROJECT STATUS (Admin only)
 router.put('/projects/:id/status', auth, adminAuth, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const project = await Project.findByPk(id);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+    const { status, featured } = req.body;
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (status !== undefined) {
+      updateFields.push('status = ?');
+      updateValues.push(status);
+    }
+    
+    if (featured !== undefined) {
+      updateFields.push('featured = ?');
+      updateValues.push(featured);
+    }
+    
+    if (updateFields.length > 0) {
+      updateValues.push(req.params.id);
+      
+      await sequelize.query(`
+        UPDATE Projects 
+        SET ${updateFields.join(', ')}, updatedAt = NOW() 
+        WHERE id = ?
+      `, {
+        replacements: updateValues,
+        type: sequelize.QueryTypes.UPDATE
+      });
     }
 
-    await project.update({ status });
-
-    res.json({
-      message: 'Project status updated successfully',
-      project: {
-        id: project.id,
-        title: project.title,
-        status: project.status
-      }
-    });
+    res.json({ message: 'Project updated successfully' });
   } catch (error) {
-    console.error('Update project status error:', error);
-    res.status(500).json({ error: 'Failed to update project status' });
+    console.error('❌ Admin update project error:', error);
+    res.status(500).json({ 
+      error: 'Failed to update project',
+      message: error.message 
+    });
   }
 });
 
-// Delete user (soft delete)
+// DELETE USER (Admin only)
 router.delete('/users/:id', auth, adminAuth, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Prevent admin from deleting themselves
-    if (user.id === req.user.userId) {
-      return res.status(400).json({ error: 'Cannot delete your own account' });
-    }
-
-    await user.update({ isActive: false });
+    await sequelize.query('DELETE FROM Users WHERE id = ?', {
+      replacements: [req.params.id],
+      type: sequelize.QueryTypes.DELETE
+    });
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    console.error('❌ Admin delete user error:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete user',
+      message: error.message 
+    });
   }
 });
 
-// Delete project
+// DELETE PROJECT (Admin only)
 router.delete('/projects/:id', auth, adminAuth, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const project = await Project.findByPk(id);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    await project.destroy();
+    await sequelize.query('DELETE FROM Projects WHERE id = ?', {
+      replacements: [req.params.id],
+      type: sequelize.QueryTypes.DELETE
+    });
 
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
-    console.error('Delete project error:', error);
-    res.status(500).json({ error: 'Failed to delete project' });
-  }
-});
-
-// Get platform statistics
-router.get('/stats', auth, adminAuth, async (req, res) => {
-  try {
-    const totalUsers = await User.count();
-    const activeUsers = await User.count({ where: { isActive: true } });
-    const graduates = await User.count({ where: { userType: 'graduate' } });
-    const investors = await User.count({ where: { userType: 'investor' } });
-    
-    const totalProjects = await Project.count();
-    const activeProjects = await Project.count({ where: { status: 'active' } });
-    const pendingProjects = await Project.count({ where: { status: 'pending' } });
-
-    res.json({
-      message: 'Statistics retrieved successfully',
-      stats: {
-        users: {
-          total: totalUsers,
-          active: activeUsers,
-          graduates,
-          investors
-        },
-        projects: {
-          total: totalProjects,
-          active: activeProjects,
-          pending: pendingProjects
-        }
-      }
+    console.error('❌ Admin delete project error:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete project',
+      message: error.message 
     });
-  } catch (error) {
-    console.error('Get stats error:', error);
-    res.status(500).json({ error: 'Failed to retrieve statistics' });
   }
 });
 

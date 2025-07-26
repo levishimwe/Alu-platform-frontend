@@ -1,4 +1,4 @@
-// src/services/api.js
+// This file contains the API service configuration and endpoints for the application.
 import axios from 'axios';
 
 // Base API configuration
@@ -20,7 +20,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token'); // ✅ Changed from 'authToken' to 'token'
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      
+
     }
 
     return config;
@@ -57,6 +57,12 @@ export const authAPI = {
 export const userAPI = {
   getProfile: () => api.get('/auth/profile'), // ✅ Changed from '/users/profile' to '/auth/profile'
   updateProfile: (profileData) => api.put('/auth/profile', profileData), // ✅ Changed from '/users/profile' to '/auth/profile'
+};
+
+// === Users API (for finding other users) ===
+export const usersAPI = {
+  getAllUsers: () => api.get('/users'),
+  getUser: (userId) => api.get(`/users/${userId}`),
 };
 
 // === Projects API ===
@@ -117,6 +123,31 @@ export const projectAPI = {
   deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
 };
 
+// === Email API ===
+export const emailAPI = {
+  getGmailAuthUrl: () => api.get('/email/auth/gmail'),
+  checkGmailStatus: () => api.get('/email/gmail/status'),
+  sendEmail: (data) => api.post('/email/send', data),
+  getSentEmails: () => api.get('/email/sent'),
+};
+
+// === Messages API ===
+export const messagesAPI = {
+  getConversations: () => api.get('/messages/conversations'),
+  sendMessage: (data) => api.post('/messages', data),
+  getMessages: (conversationId) => api.get(`/messages/${conversationId}`),
+};
+
+// === Admin API ===
+export const adminAPI = {
+  getAllUsers: () => api.get('/admin/users'),
+  getAllProjects: () => api.get('/admin/projects'),
+  updateUserStatus: (userId, data) => api.put(`/admin/users/${userId}/status`, data),
+  updateProjectStatus: (projectId, data) => api.put(`/admin/projects/${projectId}/status`, data),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  deleteProject: (projectId) => api.delete(`/admin/projects/${projectId}`),
+};
+
 // Helper function to validate project URLs
 const validateProjectUrls = (projectData) => {
   const validatedData = { ...projectData };
@@ -162,9 +193,7 @@ const validateProjectUrls = (projectData) => {
 };
 
 // === Enhanced Error Handling ===
-export const handleAPIError = (error) =>
-   {
-
+export const handleAPIError = (error) => {
   if (error.response) {
     const errorData = {
       message: error.response.data?.error || error.response.data?.message || 'An error occurred',

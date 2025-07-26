@@ -47,9 +47,10 @@ const MessageList = ({
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-gray-200 max-h-80 overflow-y-auto">
       {conversations.map((conversation) => {
-        const otherUser = conversation.otherUser;
+        // Use 'partner' instead of 'otherUser' to match API response
+        const partner = conversation.partner;
         const isSelected = selectedConversation?.id === conversation.id;
         const hasUnreadMessages = conversation.unreadCount > 0;
 
@@ -63,20 +64,22 @@ const MessageList = ({
           >
             <div className="flex items-start space-x-3">
               {/* User Avatar */}
-              <div className="flex-shrink-0">
-                {otherUser?.profileImage ? (
+              <div className="flex-shrink-0 relative">
+                {partner?.profileImage ? (
                   <img
-                    src={otherUser.profileImage}
-                    alt={`${otherUser.firstName} ${otherUser.lastName}`}
-                    className="w-10 h-10 rounded-full"
+                    src={partner.profileImage}
+                    alt={`${partner.firstName} ${partner.lastName}`}
+                    className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                    <User size={20} className="text-gray-600" />
+                    <span className="text-sm font-medium text-gray-600">
+                      {partner?.firstName?.[0]}{partner?.lastName?.[0]}
+                    </span>
                   </div>
                 )}
                 {hasUnreadMessages && (
-                  <div className="w-3 h-3 bg-blue-600 rounded-full -mt-1 -mr-1 relative float-right"></div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
                 )}
               </div>
 
@@ -86,10 +89,10 @@ const MessageList = ({
                   <h3 className={`text-sm font-medium truncate ${
                     hasUnreadMessages ? 'text-gray-900 font-semibold' : 'text-gray-900'
                   }`}>
-                    {otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : 'Unknown User'}
+                    {partner ? `${partner.firstName} ${partner.lastName}` : 'Unknown User'}
                   </h3>
                   <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                    {formatLastMessageTime(conversation.lastMessageAt)}
+                    {formatLastMessageTime(conversation.lastMessage?.createdAt)}
                   </span>
                 </div>
 
@@ -97,28 +100,39 @@ const MessageList = ({
                   <p className={`text-sm truncate ${
                     hasUnreadMessages ? 'text-gray-900 font-medium' : 'text-gray-600'
                   }`}>
+                    <span className="text-xs text-gray-500 mr-1">
+                      {conversation.lastMessage?.subject}:
+                    </span>
                     {conversation.lastMessage 
                       ? truncateMessage(conversation.lastMessage.content)
                       : 'No messages yet'
                     }
                   </p>
                   {hasUnreadMessages && (
-                    <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 ml-2">
+                    <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 ml-2 flex-shrink-0">
                       {conversation.unreadCount}
                     </span>
                   )}
                 </div>
 
-                {/* User Type Badge */}
-                {otherUser && (
-                  <span className={`inline-block text-xs px-2 py-1 rounded-full mt-1 ${
-                    otherUser.userType === 'graduate' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {otherUser.userType === 'graduate' ? 'Graduate' : 'Investor'}
+                {/* User Type and Email */}
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-gray-500 truncate">
+                    {partner?.email}
                   </span>
-                )}
+                  {partner && (
+                    <span className={`inline-block text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0 ${
+                      partner.userType === 'graduate' 
+                        ? 'bg-green-100 text-green-800' 
+                        : partner.userType === 'investor'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {partner.userType === 'graduate' ? 'Graduate' : 
+                       partner.userType === 'investor' ? 'Investor' : 'Admin'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
