@@ -153,7 +153,7 @@ router.post('/register', [
       firstName, 
       lastName, 
       email, 
-      password, 
+      password, // ✅ DON'T hash this - model hook will do it automatically
       userType, 
       profileImage, 
       bio,
@@ -167,8 +167,6 @@ router.post('/register', [
     } = req.body;
 
 
-    
-
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -176,8 +174,8 @@ router.post('/register', [
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ❌ REMOVED THIS LINE - Don't hash password manually!
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user data based on user type
     const userData = {
@@ -185,7 +183,7 @@ router.post('/register', [
       firstName,
       lastName,
       email,
-      password: hashedPassword,
+      password, // ✅ Pass plain password - model hook will hash it automatically
       userType,
       isActive: true
     };
@@ -213,6 +211,7 @@ router.post('/register', [
 
     console.log('👤 Creating user with data:', { ...userData, password: '[HIDDEN]' });
 
+    // ✅ Create user - beforeCreate hook will hash password automatically
     const user = await User.create(userData);
 
     console.log('✅ User created successfully:', user.id);
@@ -264,7 +263,7 @@ router.post('/register', [
     });
     
     if (error.name === 'SequelizeValidationError') {
-      
+
       return res.status(400).json({
         error: 'Validation failed',
         details: error.errors.map(err => ({
@@ -288,7 +287,7 @@ router.post('/register', [
   }
 });
 
-// Login route
+// Login route - WITH DEBUG LOGGING
 router.post('/login', [
   body('email')
     .isEmail()
@@ -310,21 +309,30 @@ router.post('/login', [
     }
 
     const { email, password } = req.body;
+    console.log('🔍 Login attempt:', { email, passwordLength: password.length });
 
     // Find user by email
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    console.log('👤 User found:', { id: user.id, email: user.email });
+
     // Check if user is active
     if (!user.isActive) {
+      console.log('❌ User is inactive:', email);
       return res.status(401).json({ error: 'Account has been deactivated. Please contact support.' });
     }
 
     // Check password
+    console.log('🔒 Comparing password...');
     const isPasswordValid = await user.comparePassword(password);
+    console.log('✅ Password comparison result:', isPasswordValid);
+
     if (!isPasswordValid) {
+      console.log('❌ Password invalid for user:', email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -362,6 +370,7 @@ router.post('/login', [
       createdAt: user.createdAt
     };
 
+    console.log('✅ Login successful for user:', email);
     res.json({
       message: 'Login successful',
       user: userResponse,
@@ -369,7 +378,7 @@ router.post('/login', [
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('💥 Login error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
 });
@@ -573,7 +582,7 @@ router.put('/change-password', auth, [
 // Logout route
 router.post('/logout', auth, async (req, res) => {
   try {
-
+    
 
     res.json({ message: 'Logout successful' });
   } catch (error) {

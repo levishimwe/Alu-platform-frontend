@@ -28,8 +28,10 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
+    // ✅ FIX: Add userId field for compatibility with projects route
     req.user = {
       id: user.id,
+      userId: user.id,        // Add this line
       email: user.email,
       userType: user.userType
     };
