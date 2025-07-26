@@ -5,34 +5,23 @@ const ProjectForm = ({ onSubmit, onCancel, initialData = null }) => {
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    category: initialData?.category || 'Technology',
-    stage: initialData?.stage || 'Idea',
-    fundingNeeded: initialData?.fundingNeeded || '',
-    currency: initialData?.currency || 'USD',
+    impactArea: initialData?.impactArea || '',  // Changed from category to impactArea
     images: initialData?.images || [],
     documents: initialData?.documents || [],
     videos: initialData?.videos || [],
-    tags: initialData?.tags || [],
+
     isPublic: initialData?.isPublic !== undefined ? initialData.isPublic : true,
   });
 
   const [newImage, setNewImage] = useState('');
   const [newDocument, setNewDocument] = useState({ name: '', url: '' });
   const [newVideo, setNewVideo] = useState({ name: '', url: '' });
-  const [newTag, setNewTag] = useState('');
+
   const [errors, setErrors] = useState({});
 
-  const categories = [
+  const impactAreas = [
     'Technology', 'Healthcare', 'Education', 'Agriculture', 
-    'Finance', 'Environment', 'Social Impact', 'Other'
-  ];
-
-  const stages = [
-    'Idea', 'Prototype', 'Development', 'Testing', 'Launch', 'Growth'
-  ];
-
-  const currencies = [
-    'USD', 'EUR', 'GBP', 'RWF', 'KES', 'UGX', 'TZS', 'NGN', 'GHS', 'ZAR'
+    'Finance', 'Environment', 'Social Impact', 'Innovation', 'Other'
   ];
 
   const validateGoogleDriveLink = (url) => {
@@ -52,7 +41,7 @@ const ProjectForm = ({ onSubmit, onCancel, initialData = null }) => {
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Clear error when user starts typing
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -127,22 +116,7 @@ const ProjectForm = ({ onSubmit, onCancel, initialData = null }) => {
     }));
   };
 
-  const addTag = () => {
-    if (!newTag.trim() || formData.tags.includes(newTag.trim())) return;
-    
-    setFormData(prev => ({
-      ...prev,
-      tags: [...prev.tags, newTag.trim()]
-    }));
-    setNewTag('');
-  };
-
-  const removeTag = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter((_, i) => i !== index)
-    }));
-  };
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -187,68 +161,22 @@ const ProjectForm = ({ onSubmit, onCancel, initialData = null }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category
+              Impact Area
             </label>
             <select
-              name="category"
-              value={formData.category}
+              name="impactArea"
+              value={formData.impactArea}
               onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              <option value="">Select impact area</option>
+              {impactAreas.map(area => (
+                <option key={area} value={area}>{area}</option>
               ))}
             </select>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project Stage
-            </label>
-            <select
-              name="stage"
-              value={formData.stage}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {stages.map(stage => (
-                <option key={stage} value={stage}>{stage}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Funding Needed (Optional)
-            </label>
-            <div className="flex">
-              <select
-                name="currency"
-                value={formData.currency}
-                onChange={handleInputChange}
-                className="w-24 px-2 py-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {currencies.map(currency => (
-                  <option key={currency} value={currency}>{currency}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                name="fundingNeeded"
-                value={formData.fundingNeeded}
-                onChange={handleInputChange}
-                className="flex-1 px-4 py-2 border border-l-0 border-gray-300 rounded-r-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
+         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Project Description *
@@ -422,52 +350,7 @@ const ProjectForm = ({ onSubmit, onCancel, initialData = null }) => {
           </div>
         </div>
 
-        {/* Tags Section */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tags
-          </label>
-          <div className="space-y-3">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Add a tag"
-              />
-              <button
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-            
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(index)}
-                      className="ml-2 text-blue-600 hover:text-blue-800"
-                    >
-                      <X size={14} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
+           
         {/* Visibility */}
         <div className="flex items-center">
           <input

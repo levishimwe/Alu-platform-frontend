@@ -33,10 +33,11 @@ module.exports = (sequelize) => {
       type: DataTypes.JSON,
       allowNull: true
     },
-    status: {
-      type: DataTypes.ENUM('draft', 'pending', 'active', 'completed', 'rejected'),
-      defaultValue: 'draft'
-    },
+   status: {
+  type: DataTypes.ENUM('draft', 'pending', 'active', 'completed', 'rejected'),
+  allowNull: false,
+  defaultValue: 'draft' // ✅ Use valid default
+},
     fundingGoal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true

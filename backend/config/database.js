@@ -30,11 +30,8 @@ const testConnection = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection has been established successfully.');
     
-    // Sync models (only in development)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: false }); // Use { force: true } to recreate tables
-      console.log('✅ Database models synchronized.');
-    }
+    // COMPLETELY DISABLE model sync - we use raw SQL queries
+    console.log('✅ Database ready - using raw SQL queries only.');
     
     return true;
   } catch (error) {

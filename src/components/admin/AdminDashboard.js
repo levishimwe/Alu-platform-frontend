@@ -277,24 +277,25 @@ const AdminDashboard = () => {
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Projects Management</h2>
                 <div className="grid gap-4">
+
                   {projects.map(project => (
-  <tr key={project.id} className="border-b border-gray-200 hover:bg-gray-50">
-    <td className="py-3 px-4">{project.title}</td>
-    <td className="py-3 px-4">
-      {project.graduate ? (
-        `${project.graduate.firstName} ${project.graduate.lastName}`
-      ) : (
-        'Unknown'
-      )}
-    </td>
-    <td className="py-3 px-4">
-      <span className={`px-2 py-1 rounded-full text-xs ${
-        project.status === 'active' 
-          ? 'bg-green-100 text-green-800' 
-          : project.status === 'pending'
-          ? 'bg-yellow-100 text-yellow-800'
-          : 'bg-gray-100 text-gray-800'
-      }`}>
+                       <tr key={project.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-3 px-4">{project.title}</td>
+                          <td className="py-3 px-4">
+                               {project.graduate ? (
+                                `${project.graduate.firstName} ${project.graduate.lastName}`
+                                       ) : (
+                                       'Unknown'
+                                            )}
+                                       </td>
+                                    <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                             project.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                  : project.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-gray-100 text-gray-800'
+              }`}>
         {project.status || 'draft'}
       </span>
     </td>
@@ -357,38 +358,42 @@ const AdminRegistrationModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    // Check if password matches JWT_SECRET
-    if (formData.password !== '12345@#@@@@@@@@!!!!wwwgggh.') {
-      setError('Incorrect admin password');
-      setLoading(false);
-      return;
+  // Use the JWT_SECRET from your .env
+  if (formData.password !== '12345@#@@@@@@@@!!!!wwwgggh.') {
+    setError('Incorrect admin password');
+    setLoading(false);
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:5000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...formData,
+        userType: 'admin',
+        adminSecretKey: '12345@#@@@@@@@@!!!!wwwgggh.'
+      }),
+    });
+
+    if (response.ok) {
+      onSuccess();
+    } else {
+      const data = await response.json();
+      setError(data.message || 'Registration failed');
     }
-
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        onSuccess();
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Registration failed');
-      }
-    } catch (error) {
-      setError('Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    setError('Registration failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 
