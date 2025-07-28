@@ -162,8 +162,8 @@ router.post('/send', auth, async (req, res) => {
       refresh_token: user.gmailRefreshToken
     });
 
-    // Create transporter with better error handling
-    const transporter = nodemailer.createTransporter({
+    // FIXED: Create transporter with correct method name
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         type: 'OAuth2',
@@ -300,7 +300,7 @@ router.post('/send-simple', auth, async (req, res) => {
     }
 
     // Create transporter with app password
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.GMAIL_USER, // Your Gmail

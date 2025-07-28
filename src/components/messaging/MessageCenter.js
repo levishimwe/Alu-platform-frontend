@@ -16,14 +16,14 @@ const MessageCenter = () => {
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [activeTab, setActiveTab] = useState('conversations');
-  const [gmailConnected, setGmailConnected] = useState(false);
+
 
   // Fetch conversations and emails when component mounts
   useEffect(() => {
     if (user) {
       fetchConversations();
       fetchSentEmails();
-      checkGmailStatus();
+
     }
   }, [user]);
 
@@ -70,24 +70,7 @@ const MessageCenter = () => {
     }
   };
 
-  const checkGmailStatus = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/email/gmail/status', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setGmailConnected(data.isConnected);
-      }
-    } catch (error) {
-      console.error('Failed to check Gmail status');
-    }
-  };
-
+// Function to handle sending an email
   const handleSendEmail = (recipient) => {
     setSelectedRecipient(recipient);
     setShowEmailModal(true);
@@ -135,30 +118,14 @@ const MessageCenter = () => {
                 <p className="text-gray-600">Connect and communicate with other users</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              {/* Gmail Status Indicator */}
-              <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-50">
-                {gmailConnected ? (
-                  <>
-                    <CheckCircle size={16} className="text-green-600" />
-                    <span className="text-sm text-green-700">Gmail Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle size={16} className="text-orange-600" />
-                    <span className="text-sm text-orange-700">Gmail Not Connected</span>
-                  </>
-                )}
-              </div>
-              
-              <button
-                onClick={() => setShowContactModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
-              >
-                <Users size={16} />
-                <span>Find Users</span>
-              </button>
-            </div>
+            
+            <button
+              onClick={() => setShowContactModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Users size={16} />
+              <span>Find Users</span>
+            </button>
           </div>
 
           {/* Tab Navigation */}
@@ -239,10 +206,7 @@ const MessageCenter = () => {
                   <Mail size={64} className="mx-auto mb-4 text-gray-300" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No emails sent yet</h3>
                   <p className="text-gray-600 mb-6">
-                    {gmailConnected 
-                      ? "Start sending emails to connect with other users"
-                      : "Connect your Gmail account to start sending emails"
-                    }
+                    Start sending emails to connect with other users
                   </p>
                   <button
                     onClick={() => setShowContactModal(true)}
