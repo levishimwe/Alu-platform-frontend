@@ -20,7 +20,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token'); // ✅ Changed from 'authToken' to 'token'
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-
+      
     }
 
     return config;
@@ -63,6 +63,30 @@ export const userAPI = {
 export const usersAPI = {
   getAllUsers: () => api.get('/users'),
   getUser: (userId) => api.get(`/users/${userId}`),
+};
+
+// === Graduates API ===
+export const graduatesAPI = {
+  // Get all graduates (for graduates directory)
+  getAllGraduates: () => api.get('/profiles/graduates'),
+  
+  // Get specific graduate profile
+  getGraduateProfile: (graduateId) => api.get(`/profiles/graduate/${graduateId}`),
+  
+  // Update graduate profile
+  updateGraduateProfile: (profileData) => api.put('/profiles/graduate', profileData),
+  
+  // Graduate dashboard
+  getDashboard: () => api.get('/graduate/dashboard'),
+  
+  // Graduate projects
+  getGraduateProjects: () => api.get('/graduate/projects'),
+  
+  // Project analytics
+  getProjectAnalytics: (projectId) => api.get(`/graduate/analytics/${projectId}`),
+  
+  // Graduate messages
+  getGraduateMessages: () => api.get('/graduate/messages'),
 };
 
 // === Projects API ===
