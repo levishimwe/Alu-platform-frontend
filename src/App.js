@@ -13,6 +13,7 @@ import ProjectForm from "./components/projects/ProjectForm";
 import GraduateProfile from './components/profile/GraduateProfile';
 import InvestorProfile from './components/profile/InvestorProfile';
 import MessageCenter from './components/messaging/MessageCenter';
+import Graduates from './components/pages/Graduates'; // ✅ Add this import
 
 import "./styles/index.css";
 
@@ -29,7 +30,7 @@ const AppContent = () => {
       } else if (user.userType === "investor") {
         setCurrentPage("investor-portal");
       } else if (user.userType === "admin") {
-        setCurrentPage("admin-dashboard"); // Changed from admin-panel to admin-dashboard
+        setCurrentPage("admin-dashboard");
       }
     }
   }, [user, currentPage]);
@@ -55,7 +56,7 @@ const AppContent = () => {
       'graduate-dashboard', 
       'investor-portal', 
       'admin-panel',
-      'admin-dashboard', // Add this
+      'admin-dashboard',
       'graduates', 
       'create-project', 
       'edit-project',
@@ -97,7 +98,7 @@ const AppContent = () => {
       } else {
         const error = await response.json();
         console.error('Project submission failed:', error);
-
+        
       }
     } catch (error) {
       console.error('Project submission error:', error);
@@ -272,7 +273,6 @@ const AppContent = () => {
           );
         }
 
-        
         if (user.userType === 'graduate') {
           return <GraduateProfile />;
         } else if (user.userType === 'investor') {
@@ -341,8 +341,8 @@ const AppContent = () => {
             />
           </div>
         );
-        
-    
+
+      // ✅ Replace the hardcoded "coming soon" with actual Graduates component
       case "graduates":
         if (!user) {
           return (
@@ -360,17 +360,7 @@ const AppContent = () => {
             </div>
           );
         }
-        return (
-          <div className="min-h-screen bg-gray-50 py-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-8">ALU Graduates</h1>
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <h2 className="text-xl font-semibold mb-4">Graduates Directory</h2>
-                <p className="text-gray-600">This section is coming soon. Here you'll be able to browse and connect with ALU graduates.</p>
-              </div>
-            </div>
-          </div>
-        );
+        return <Graduates />; // ✅ Use the actual Graduates component
 
       case "messages":
         if (!user) {
@@ -396,7 +386,7 @@ const AppContent = () => {
     }
   };
 
-    return (
+  return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
         currentPage={currentPage}
