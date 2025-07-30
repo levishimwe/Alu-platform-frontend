@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Star, Users, TrendingUp, Award, ArrowRight, Play } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Homepage = () => {
@@ -27,10 +27,7 @@ const Homepage = () => {
       content: {
         title: 'Experience ALU',
         subtitle: 'A One of A Kind University',
-        // Use ALU's official YouTube videos - replace with actual ALU video URL
-        youtubeId: '8rkzLjpRFOU&t=276s', // Replace this with actual ALU video ID
-        // Alternative ALU videos you can use:
-        // youtubeId: 'YOUR_ALU_VIDEO_ID_HERE',
+        youtubeId: '8rkzLjpRFOU&t=276s',
         description: 'Discover how ALU graduates are making impact across Africa and beyond through innovative projects and entrepreneurial solutions.'
       }
     }
@@ -48,7 +45,7 @@ const Homepage = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       nextSlide();
-    }, 10000); // Change slide every 10 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -130,9 +127,9 @@ const Homepage = () => {
                       top: '50%',
                       left: '50%',
                       width: '100vw',
-                      height: '56.25vw', // 16:9 aspect ratio
+                      height: '56.25vw',
                       minHeight: '100vh',
-                      minWidth: '177.77vh', // 16:9 aspect ratio
+                      minWidth: '177.77vh',
                       transform: 'translate(-50%, -50%)',
                     }}
                   ></iframe>
@@ -215,7 +212,7 @@ const Homepage = () => {
         </div>
       </div>
 
-      {/* Additional Content Sections */}
+      {/* Empowering ALU Graduates Section - Keep Existing */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -258,6 +255,239 @@ const Homepage = () => {
                 Supporting projects that create meaningful change across Africa and beyond.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+        {/* Statistics Section */}
+      <div className="bg-[#011e41] py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Platform Impact
+            </h2>
+            <p className="text-lg text-gray-300 max-w-3xl mx-auto">
+              Connecting innovation with opportunity across Africa
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mx-auto mb-4">
+                <Users className="text-white" size={32} />
+              </div>
+              <div className="text-3xl font-bold text-white mb-2">500+</div>
+              <div className="text-gray-300">Active Graduates</div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mx-auto mb-4">
+                <TrendingUp className="text-white" size={32} />
+              </div>
+              <div className="text-3xl font-bold text-white mb-2">200+</div>
+              <div className="text-gray-300">Projects Showcased</div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mx-auto mb-4">
+                <Award className="text-white" size={32} />
+              </div>
+              <div className="text-3xl font-bold text-white mb-2">50+</div>
+              <div className="text-gray-300">Successful Connections</div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mx-auto mb-4">
+                <Star className="text-white" size={32} />
+              </div>
+              <div className="text-3xl font-bold text-white mb-2">98%</div>
+              <div className="text-gray-300">Success Rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+     {/* Featured Projects Section */}
+      <div className="bg-gray-50 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Featured Projects
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Discover innovative solutions created by talented ALU graduates
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="h-48 bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center">
+                <span className="text-6xl">🌱</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">AgriTech Solutions</h3>
+                <p className="text-gray-600 mb-4">
+                  Smart farming platform connecting farmers with modern agricultural techniques.
+                </p>
+                <a 
+                  href="https://www.minagri.gov.rw/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors duration-300"
+                >
+                  Learn More <ArrowRight size={16} className="ml-1" />
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="h-48 bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center">
+                <span className="text-6xl">💊</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">HealthTech Innovation</h3>
+                <p className="text-gray-600 mb-4">
+                  Digital health platform improving healthcare access in rural communities.
+                </p>
+                <a 
+                  href="https://www.mwckigali.com/themes/healthtech" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors duration-300"
+                >
+                  Learn More <ArrowRight size={16} className="ml-1" />
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="h-48 bg-gradient-to-r from-orange-400 to-red-500 flex items-center justify-center">
+                <span className="text-6xl">🎓</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">EduTech Platform</h3>
+                <p className="text-gray-600 mb-4">
+                  Online learning platform making quality education accessible to all.
+                </p>
+                <a 
+                  href="https://edtechhub.org/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors duration-300"
+                >
+                  Learn More <ArrowRight size={16} className="ml-1" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Testimonials Section */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              What Our Community Says
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Hear from graduates and investors who are part of our growing ecosystem
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-lg">
+              <div className="flex items-center mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="text-yellow-400 fill-current" size={16} />
+                ))}
+              </div>
+              <p className="text-gray-700 mb-4">
+                "This platform helped me connect with the right investors for my fintech startup. The process was seamless and professional."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  A
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Amara Okafor</div>
+                  <div className="text-sm text-gray-600">ALU Graduate '22</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-lg">
+              <div className="flex items-center mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="text-yellow-400 fill-current" size={16} />
+                ))}
+              </div>
+              <p className="text-gray-700 mb-4">
+                "As an investor, I've found incredible opportunities through this platform. The quality of projects is outstanding."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  K
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Kwame Asante</div>
+                  <div className="text-sm text-gray-600">Impact Investor</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-pink-50 to-orange-50 p-6 rounded-lg">
+              <div className="flex items-center mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="text-yellow-400 fill-current" size={16} />
+                ))}
+              </div>
+              <p className="text-gray-700 mb-4">
+                "The platform showcased my project beautifully and helped me gain visibility in the tech ecosystem."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  Z
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Zuri Mwangi</div>
+                  <div className="text-sm text-gray-600">ALU Graduate '23</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Call to Action Section */}
+      <div className="bg-[#011e41] py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Ready to Join Our Community?
+          </h2>
+          <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
+            Whether you're a graduate looking to showcase your project or an investor seeking the next big opportunity, we're here to connect you.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => {
+                if (!user) {
+                  document.querySelector('[data-auth-trigger]')?.click();
+                }
+              }}
+              className="bg-white text-[#011e41] hover:bg-gray-100 font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+            >
+              Get Started Today
+            </button>
+            <a
+              href="https://www.youtube.com/watch?v=8rkzLjpRFOU&t=284s"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#011e41] font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+            >
+              <Play className="mr-2" size={20} />
+              Watch Demo
+            </a>
           </div>
         </div>
       </div>
