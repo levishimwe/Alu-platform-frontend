@@ -3,6 +3,21 @@ const router = express.Router();
 const { User, GraduateProfile, InvestorProfile } = require('../models');
 const auth = require('../middleware/auth');
 
+// GET all graduates (for graduates directory page)
+router.get('/graduates', async (req, res) => {
+  try {
+    const graduates = await User.findAll({
+      where: { userType: 'graduate' },
+      attributes: ['id', 'firstName', 'lastName', 'email', 'bio', 'university', 'graduationYear', 'city', 'country', 'profileImage']
+    });
+
+    res.json(graduates);
+  } catch (error) {
+    console.error('Error fetching graduates:', error);
+    res.status(500).json({ message: 'Error fetching graduates' });
+  }
+});
+
 // GET graduate profile
 router.get('/graduate/:id', async (req, res) => {
   try {
@@ -129,34 +144,21 @@ router.put('/graduate', auth, async (req, res) => {
       where: { userId },
       defaults: {
         userId,
-        firstName: firstName || user.firstName,
-        lastName: lastName || user.lastName,
-        email: user.email,
-        bio: bio || user.bio,
-        graduationYear: graduationYear || user.graduationYear,
-        major: major || '',
+
         skills: skills || [],
-        achievements: achievements || [],
-        portfolioUrl: portfolio_url || '',
-        linkedinUrl: linkedin_url || '',
-        githubUrl: github_url || ''
+        experience: bio || '',
+        portfolio: portfolio_url || ''
       }
     });
 
     if (!created) {
-      // Update existing profile
+      // Update existing profile - match your actual table structure
       await GraduateProfile.update(
         {
-          firstName: firstName || graduateProfile.firstName,
-          lastName: lastName || graduateProfile.lastName,
-          bio: bio || graduateProfile.bio,
-          graduationYear: graduationYear || graduateProfile.graduationYear,
-          major: major || graduateProfile.major,
+          
           skills: skills || graduateProfile.skills,
-          achievements: achievements || graduateProfile.achievements,
-          portfolioUrl: portfolio_url || graduateProfile.portfolioUrl,
-          linkedinUrl: linkedin_url || graduateProfile.linkedinUrl,
-          githubUrl: github_url || graduateProfile.githubUrl
+          experience: bio || graduateProfile.experience,
+          portfolio: portfolio_url || graduateProfile.portfolio
         },
         {
           where: { userId }

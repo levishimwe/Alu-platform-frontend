@@ -11,10 +11,26 @@ const graduateAuth = (req, res, next) => {
   next();
 };
 
+// Get all graduates (public endpoint for graduates directory)
+router.get('/all', async (req, res) => {
+  try {
+    const graduates = await User.findAll({
+      where: { userType: 'graduate' },
+      attributes: ['id', 'firstName', 'lastName', 'email', 'bio', 'university', 'graduationYear', 'city', 'country', 'profileImage'],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json(graduates);
+  } catch (error) {
+    console.error('Error fetching all graduates:', error);
+    res.status(500).json({ message: 'Error fetching graduates' });
+  }
+});
+
 // Get graduate dashboard
 router.get('/dashboard', auth, graduateAuth, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
 
     // Get user's projects
     const projects = await Project.findAll({
@@ -26,8 +42,8 @@ router.get('/dashboard', auth, graduateAuth, async (req, res) => {
     const totalProjects = projects.length;
     const approvedProjects = projects.filter(p => p.status === 'approved').length;
     const pendingProjects = projects.filter(p => p.status === 'pending').length;
-    const totalViews = projects.reduce((sum, p) => sum + p.views, 0);
-    const totalLikes = projects.reduce((sum, p) => sum + p.likes, 0);
+    const totalViews = projects.reduce((sum, p) => sum + (p.views || 0), 0);
+    const totalLikes = projects.reduce((sum, p) => sum + (p.likes || 0), 0);
 
     res.json({
       stats: {
@@ -48,12 +64,13 @@ router.get('/dashboard', auth, graduateAuth, async (req, res) => {
 // Get graduate's projects
 router.get('/projects', auth, graduateAuth, async (req, res) => {
   try {
+    const userId = req.user.userId || req.user.id;
     const projects = await Project.findAll({
-      where: { userId: req.user.userId },
+      where: { userId },
       order: [['createdAt', 'DESC']]
     });
 
-    res.json(projects);
+    res.json({ projects });
   } catch (error) {
     console.error('Get graduate projects error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -69,14 +86,15 @@ router.get('/analytics/:projectId', auth, graduateAuth, async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    if (project.userId !== req.user.userId) {
+    const userId = req.user.userId || req.user.id;
+    if (project.userId !== userId) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
     // Basic analytics - expand as needed
     const analytics = {
-      views: project.views,
-      likes: project.likes,
+      views: project.views || 0,
+      likes: project.likes || 0,
       status: project.status,
       createdAt: project.createdAt,
       // Add more analytics data as needed
