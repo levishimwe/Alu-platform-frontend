@@ -52,7 +52,7 @@ git --version     # Should show Git version
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/Alu-platform-frontend.git
+git clone https://github.com/levishimwe/Alu-platform-frontend
 
 # Navigate to the project directory
 cd Alu-platform-frontend
@@ -310,7 +310,7 @@ EXIT;
 cd backend
 
 # Start the backend server
-npm start
+npm start /npm run dev
 
 # You should see:
 # Server running on port 5000
@@ -502,7 +502,7 @@ If you need help:
 - Check the troubleshooting section above
 - Review the error messages in your terminal/browser console
 - Ensure all prerequisites are properly installed
-
+- Contact me at (i.levis@alustudent.com)
 ---
 
 **🎓 Built for the ALU community - Connecting graduates with opportunities!**
