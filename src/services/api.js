@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Base API configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://alu-backend-jtqvevy39-levys-projects-81b231fd.vercel.app/api'; // Use environment variable or default to production URL
 
 // Create axios instance with proper configuration
 const api = axios.create({
