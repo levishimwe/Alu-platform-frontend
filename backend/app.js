@@ -49,7 +49,9 @@ app.use(cors({
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://172.26.10.146:3000',
-    'http://0.0.0.0:3000'
+    'http://0.0.0.0:3000',
+    'https://alu-platform-frontend.vercel.app', // Add your Vercel frontend URL
+    /\.vercel\.app$/ // Allow all Vercel subdomains
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -196,23 +198,26 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 API base: http://localhost:${PORT}/api`);
-  console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
-  console.log(`📁 Projects endpoints: http://localhost:${PORT}/api/projects`);
-  console.log(`👤 Profile endpoints: http://localhost:${PORT}/api/profiles`);
-  console.log(`💬 Messages endpoints: http://localhost:${PORT}/api/messages`);
-  console.log(`👥 Users endpoints: http://localhost:${PORT}/api/users`);
-  console.log(`⚙️  Admin endpoints: http://localhost:${PORT}/api/admin`);
-  console.log(`✉️ Email restriction: Google emails only`);
-  console.log(`🖼️ Image hosting: Google Drive links only`);
-  console.log(`🎥 Video hosting: YouTube links only`);
-  console.log(`📄 Document hosting: Google Drive links only`);
-  console.log(`🎓 University restriction: African Leadership University only`);
-  console.log(`📚 Major restriction: BSE, BEL, IBT only`);
-});
+// Only start server when running directly (not when imported by Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 API base: http://localhost:${PORT}/api`);
+    console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
+    console.log(`📁 Projects endpoints: http://localhost:${PORT}/api/projects`);
+    console.log(`👤 Profile endpoints: http://localhost:${PORT}/api/profiles`);
+    console.log(`💬 Messages endpoints: http://localhost:${PORT}/api/messages`);
+    console.log(`👥 Users endpoints: http://localhost:${PORT}/api/users`);
+    console.log(`⚙️  Admin endpoints: http://localhost:${PORT}/api/admin`);
+    console.log(`✉️ Email restriction: Google emails only`);
+    console.log(`🖼️ Image hosting: Google Drive links only`);
+    console.log(`🎥 Video hosting: YouTube links only`);
+    console.log(`📄 Document hosting: Google Drive links only`);
+    console.log(`🎓 University restriction: African Leadership University only`);
+    console.log(`📚 Major restriction: BSE, BEL, IBT only`);
+  });
+}
 
+// Export for Vercel
 module.exports = app;
