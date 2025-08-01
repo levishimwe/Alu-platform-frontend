@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Base API configuration - FIX THE URL!
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://alu-platform-backend.vercel.app/api'; 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://alu-backend-ljw75hl22-levys-projects-81b231fd.vercel.app/api'; 
 
 // Create axios instance with proper configuration
 const api = axios.create({
@@ -22,7 +22,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
 
     }
-    
+
     return config;
   },
   (error) => {
