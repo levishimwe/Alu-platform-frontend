@@ -47,7 +47,7 @@ const ChatWindow = ({
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/messages/send', {
+      const response = await fetch('https://alu-platform.onrender.com/api/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -31,7 +31,7 @@ const MessageCenter = () => {
     try {
       
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/messages/conversations', {
+      const response = await fetch('https://alu-platform.onrender.com/api/messages/conversations', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
