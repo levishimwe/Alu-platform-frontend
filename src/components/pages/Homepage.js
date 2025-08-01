@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Volume2, VolumeX, Star, Users, TrendingUp, Award, ArrowRight, Play } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -6,7 +6,8 @@ const Homepage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const { user } = useAuth();
-
+  const autoplayIntervalRef = useRef(null);
+  
   const slides = [
     {
       type: 'hero',
@@ -27,7 +28,7 @@ const Homepage = () => {
       content: {
         title: 'Experience ALU',
         subtitle: 'A One of A Kind University',
-        youtubeId: '8rkzLjpRFOU&t=276s',
+        youtubeId: '8rkzLjpRFOU', // Fixed: Removed timestamp from ID
         description: 'Discover how ALU graduates are making impact across Africa and beyond through innovative projects and entrepreneurial solutions.'
       }
     }
@@ -41,14 +42,22 @@ const Homepage = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
-  // Auto-advance slides
+  // Reset and restart the autoplay interval when slide changes
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (autoplayIntervalRef.current) {
+      clearInterval(autoplayIntervalRef.current);
+    }
+    
+    autoplayIntervalRef.current = setInterval(() => {
       nextSlide();
     }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
+    
+    return () => {
+      if (autoplayIntervalRef.current) {
+        clearInterval(autoplayIntervalRef.current);
+      }
+    };
+  }, [currentSlide]);
 
   return (
     <div className="relative">
@@ -113,26 +122,20 @@ const Homepage = () => {
 
             {slide.type === 'video' && (
               <div className="relative h-full bg-black">
-                {/* YouTube Video Embed */}
-                <div className="absolute inset-0">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${slide.content.youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${slide.content.youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1`}
-                    title="ALU University Video"
-                    className="w-full h-full object-cover"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      width: '100vw',
-                      height: '56.25vw',
-                      minHeight: '100vh',
-                      minWidth: '177.77vh',
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  ></iframe>
+                {/* FIXED: YouTube Video Embed */}
+                <div className="relative h-full w-full overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative w-full h-0 pb-[56.25%]">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${slide.content.youtubeId}?start=276&autoplay=0&mute=1&loop=1&playlist=${slide.content.youtubeId}&controls=1&rel=0&modestbranding=1`}
+                        title="ALU University Video"
+                        className="absolute top-0 left-0 w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Video Overlay */}
@@ -148,22 +151,15 @@ const Homepage = () => {
                       {slide.content.description}
                     </p>
                     
-                    {/* Mute/Unmute Button */}
+                    {/* Play button instead of mute toggle */}
                     <button
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-6 rounded-full text-sm transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center mx-auto animate-fade-in-up delay-600"
+                      onClick={() => {
+                        window.open(`https://www.youtube.com/watch?v=${slide.content.youtubeId}&t=276s`, '_blank');
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full text-sm transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center mx-auto animate-fade-in-up delay-600"
                     >
-                      {isMuted ? (
-                        <>
-                          <VolumeX className="mr-2" size={20} />
-                          UNMUTE
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="mr-2" size={20} />
-                          MUTE
-                        </>
-                      )}
+                      <Play className="mr-2" size={20} />
+                      WATCH ON YOUTUBE
                     </button>
                   </div>
                 </div>
@@ -176,6 +172,7 @@ const Homepage = () => {
         <button
           onClick={prevSlide}
           className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 z-20 backdrop-blur-sm"
+          aria-label="Previous slide"
         >
           <ChevronLeft size={24} />
         </button>
@@ -183,6 +180,7 @@ const Homepage = () => {
         <button
           onClick={nextSlide}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-300 z-20 backdrop-blur-sm"
+          aria-label="Next slide"
         >
           <ChevronRight size={24} />
         </button>
@@ -196,6 +194,7 @@ const Homepage = () => {
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
                 index === currentSlide ? 'bg-white scale-110' : 'bg-white/50'
               }`}
+              aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
@@ -203,18 +202,27 @@ const Homepage = () => {
         {/* Progress Bar for Auto-advance */}
         <div className="absolute top-0 left-0 w-full h-1 bg-white/10 z-20">
           <div 
-            className="h-full bg-white transition-all ease-linear"
+            className="h-full bg-white animate-progress-bar"
             style={{
-              width: currentSlide === 0 ? '0%' : '100%',
-              animationDuration: '10s'
+              width: '100%',
+              animationDuration: '10s',
+              animationPlayState: 'running',
+              animationIterationCount: 1,
+              animationName: 'progress',
+              animationTimingFunction: 'linear',
+              transform: `scaleX(${currentSlide === 0 ? 0 : 1})`,
+              transformOrigin: 'left',
+              transition: 'transform 10s linear'
             }}
           ></div>
         </div>
       </div>
 
-      {/* Empowering ALU Graduates Section - Keep Existing */}
+      {/* Rest of your component remains unchanged */}
+      {/* Empowering ALU Graduates Section */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Your existing content */}
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Empowering ALU Graduates
@@ -259,9 +267,10 @@ const Homepage = () => {
         </div>
       </div>
 
-        {/* Statistics Section */}
+      {/* Statistics Section */}
       <div className="bg-[#011e41] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Your existing content */}
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Platform Impact
@@ -306,6 +315,7 @@ const Homepage = () => {
           </div>
         </div>
       </div>
+
 
      {/* Featured Projects Section */}
       <div className="bg-gray-50 py-16">
