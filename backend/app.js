@@ -52,6 +52,7 @@ app.use(cors({
     'http://127.0.0.1:3000',
     'http://172.26.10.146:3000',
     'http://0.0.0.0:3000',
+    'https://alu-platform.onrender.com/api',
     'https://alu-platform-frontend-fza9.vercel.app',
     
   ],
