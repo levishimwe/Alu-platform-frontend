@@ -1,8 +1,8 @@
 // This file contains the API service configuration and endpoints for the application.
 import axios from 'axios';
 
-// Base API configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://alu-backend-jtqvevy39-levys-projects-81b231fd.vercel.app/api'; // Use environment variable or default to production URL
+// Base API configuration - FIX THE URL!
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://alu-platform-backend.vercel.app/api'; 
 
 // Create axios instance with proper configuration
 const api = axios.create({
@@ -16,13 +16,13 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token - Fix the key name
-    const token = localStorage.getItem('token'); // ✅ Changed from 'authToken' to 'token'
+    // Add auth token
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      
-    }
 
+    }
+    
     return config;
   },
   (error) => {
