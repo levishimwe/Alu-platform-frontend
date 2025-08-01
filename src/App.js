@@ -78,8 +78,8 @@ const AppContent = () => {
     try {
       const token = localStorage.getItem('token');
       const url = editingProject 
-        ? `http://localhost:5000/api/projects/${editingProject.id}`
-        : 'http://localhost:5000/api/projects';
+        ? `https://alu-platform.onrender.com/api/projects/${editingProject.id}`
+        : 'https://alu-platform.onrender.com/api/projects';
       
       const method = editingProject ? 'PUT' : 'POST';
       
