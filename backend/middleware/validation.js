@@ -1,4 +1,5 @@
 // === backend/middleware/validation.js ===
+// Middleware for validating request data using express-validator
 const { body } = require("express-validator");
 
 const registerValidation = [
