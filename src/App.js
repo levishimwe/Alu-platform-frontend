@@ -77,20 +77,24 @@ const AppContent = () => {
   const handleProjectSubmit = async (projectData) => {
     try {
       const token = localStorage.getItem('token');
-      const url = editingProject 
-        ? `http://localhost:5000/api/projects/${editingProject.id}`
-        : 'http://localhost:5000/api/projects';
-      
-      const method = editingProject ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(projectData),
-      });
+    
+    // WITH THIS SECTION THAT USES ENVIRONMENT VARIABLES
+    const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://alu-backend-ljw75hl22-levys-projects-81b231fd.vercel.app/api';
+    const url = editingProject 
+      ? `${API_BASE}/projects/${editingProject.id}`.replace('/api/api/', '/api/')
+      : `${API_BASE}/projects`.replace('/api/api/', '/api/');
+    
+    const method = editingProject ? 'PUT' : 'POST';
+    
+    // Rest of the function remains the same
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(projectData),
+    });
 
       if (response.ok) {
         setEditingProject(null);
