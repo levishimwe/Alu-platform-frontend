@@ -22,7 +22,7 @@ const ChatWindow = ({
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:5000/api/messages/conversation/${conversation.partner.id}`,
+        `https://alu-platform.onrender.com/api/messages/conversation/${conversation.partner.id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -54,7 +54,7 @@ const MessageCenter = () => {
   const fetchSentEmails = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/email/sent', {
+      const response = await fetch('https://alu-platform.onrender.com/api/email/sent', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
