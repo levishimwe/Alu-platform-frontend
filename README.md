@@ -234,7 +234,7 @@ Common problems and solutions:
 
 ## 📞 Support
 
-Need help?  
+### Need help?  
 - Email: [i.levis@alustudent.com]  
 - Or refer to the troubleshooting section above.
 
