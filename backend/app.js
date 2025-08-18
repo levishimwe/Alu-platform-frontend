@@ -25,19 +25,29 @@ const PORT = process.env.PORT || 5000;
 // Database connection WITHOUT model synchronization
 testConnection()
   .then(async (connected) => {
-
+    
     if (connected) {
       console.log("✅ Database connected successfully...");
       console.log("✅ Using existing database schema with raw SQL queries");
       console.log("✅ Skipping model sync to preserve manually added columns");
     } else {
-      console.error("❌ Failed to connect to database");
-      process.exit(1);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn("⚠️  Database connection failed - running in limited mode");
+        console.warn("⚠️  API will start but database-dependent features won't work");
+      } else {
+        console.error("❌ Failed to connect to database in production mode");
+        process.exit(1);
+      }
     }
   })
   .catch((err) => {
-    console.error("❌ DB Error: ", err);
-    process.exit(1);
+    console.error("❌ DB Error: ", err.message);
+    if (process.env.NODE_ENV === 'production') {
+      console.error("❌ Exiting due to database connection failure in production");
+      process.exit(1);
+    } else {
+      console.warn("⚠️  Continuing in development mode without database");
+    }
   });
 
 // Security middleware
@@ -204,22 +214,5 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 API base: http://localhost:${PORT}/api`);
-  console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
-  console.log(`📁 Projects endpoints: http://localhost:${PORT}/api/projects`);
-  console.log(`👤 Profile endpoints: http://localhost:${PORT}/api/profiles`);
-  console.log(`💬 Messages endpoints: http://localhost:${PORT}/api/messages`);
-  console.log(`👥 Users endpoints: http://localhost:${PORT}/api/users`);
-  console.log(`⚙️  Admin endpoints: http://localhost:${PORT}/api/admin`);
-  console.log(`✉️ Email restriction: Google emails only`);
-  console.log(`🖼️ Image hosting: Google Drive links only`);
-  console.log(`🎥 Video hosting: YouTube links only`);
-  console.log(`📄 Document hosting: Google Drive links only`);
-  console.log(`🎓 University restriction: African Leadership University only`);
-  console.log(`📚 Major restriction: BSE, BEL, IBT only`);
-});
+// Export the app for use by server.js
 module.exports = app;
