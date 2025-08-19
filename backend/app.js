@@ -42,7 +42,7 @@ testConnection()
   })
   .catch((err) => {
     console.error("❌ DB Error: ", err.message);
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'development') {
       console.error("❌ Exiting due to database connection failure in production");
       process.exit(1);
     } else {
@@ -87,7 +87,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'development') {
   app.use(morgan('dev'));
 }
 
