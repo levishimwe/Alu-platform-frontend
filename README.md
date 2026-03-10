@@ -30,8 +30,8 @@ A modern web platform connecting ALU (African Leadership University) graduates w
 Experience the platform live without installing anything locally:
 
 ### 🚀 Production URLs
-- **Frontend**: [alu-platform-frontend-fza9.vercel.app](https://alu-platform-frontend-fza9.vercel.app)
-- **Backend API**: [alu-platform.onrender.com/api](https://alu-platform.onrender.com/api)
+- **Frontend**: Vercel (set your project domain after deployment)
+- **Backend API**: Railway (set your API domain after deployment)
 
 ### 🧱 Deployment Architecture
 
@@ -65,8 +65,8 @@ Use these credentials to explore platform features:
 
 #### Vercel (Frontend)
 ```env
-REACT_APP_API_BASE_URL=https://alu-platform.onrender.com/api
-REACT_APP_CLIENT_URL=https://alu-platform-frontend-fza9.vercel.app
+REACT_APP_API_BASE_URL=http://localhost:5000/api
+REACT_APP_CLIENT_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
 ```
 
@@ -77,7 +77,7 @@ DB_USER=your_db_username
 DB_PASSWORD=your_secure_db_password
 DB_NAME=alu_platform
 JWT_SECRET=your_strong_jwt_secret
-CLIENT_URL=https://alu-platform-frontend-fza9.vercel.app
+CLIENT_URL=http://localhost:3000
 NODE_ENV=development
 ```
 

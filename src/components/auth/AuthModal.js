@@ -97,7 +97,7 @@ const AuthModal = ({ isOpen, onClose, mode, onSwitchMode }) => {
       
       // Admin validation
       if (formData.userType === 'admin') {
-        if (formData.adminSecretKey !== '12345@#@@@@@@@@!!!!wwwgggh.') {
+        if (formData.adminSecretKey !== process.env.REACT_APP_ADMIN_SECRET_KEY) { //TODO: Sanitize the hardcoded key
           newErrors.adminSecretKey = 'Invalid admin secret key';
         }
       }
